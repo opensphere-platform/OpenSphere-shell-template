@@ -1,0 +1,21 @@
+{
+  "manifestVersion": 2,
+  "kind": "subShell",
+  "id": "shell-template",
+  "version": "0.1.0",
+  "title": "Shell Template",
+  "description": "OpenSphere subShell — Shell Template (SDK 표준 골격).",
+  "entry": "ui-shell.plugin.js",
+  "entrySha256": "ccdccf361934c7cb15de258a18e862da0353273614c12e477d95de99a3c7816e",
+  "shellCompat": ">=0.2.0 <0.9.0",
+  "permissions": [
+    "page:register",
+    "api:proxy"
+  ],
+  "nav": {
+    "band": "구축 Build",
+    "label": "Shell Template"
+  },
+  "designSystem": "clarity",
+  "apiBase": "/api/plugins/shell-template"
+}
