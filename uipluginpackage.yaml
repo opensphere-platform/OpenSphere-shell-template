@@ -12,7 +12,7 @@ spec:
   description: "Shell Template — OpenSphere subShell (SDK 표준 골격)"
   image:
     repository: localhost:5000/shell-template
-    digest: v1
+    digest: v3
   nav:
     band: "구축 Build"
     label: "Shell Template"

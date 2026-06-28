@@ -37,12 +37,20 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
     .cm-brand { display: flex; align-items: center; gap: 0.4rem; min-height: 3.05rem; padding: 0.55rem 0.9rem; border-bottom: 1px solid #e0e0e0; }
     .cm-brand strong { font-size: 0.875rem; font-weight: 600; color: #161616; }
 
-    .os-content { min-width: 0; min-height: 100vh; overflow: auto; padding: 1.5rem 2rem; background: var(--os-overview-bg, #f4f4f4); }
+    .os-content { min-width: 0; min-height: 100vh; overflow: auto; padding: 1.1rem 1.4rem 2rem; background: var(--os-overview-bg, #f4f4f4); }
     .os-tree-ic { width: 16px; height: 16px; }
 
-    /* breadcrumb */
-    .cc-crumbs { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 0.85rem; font-size: 0.8rem; }
-    .cc-crumb { color: #4c6fff; } .cc-crumb.is-cur { color: #161616; } .cc-crumb-sep { color: #8c8c8c; }
+    /* 페이지 경로 — AI Hub 표준: 상단 회색 박스 바(좌우 풀폭). negative margin = .os-content 패딩(1.1rem 1.4rem). */
+    .cc-crumbs {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; min-height: 2rem;
+      margin: -1.1rem -1.4rem 0.9rem; padding: 0.45rem 1.4rem;
+      background: #f4f4f4; border-top: 1px solid #d0d0d0; border-bottom: 1px solid #d0d0d0;
+      font-size: 0.8125rem; line-height: 1rem;
+    }
+    .cc-crumb { color: #525252; }
+    .cc-crumb-link { color: #4c6fff; text-decoration: none; cursor: pointer; }
+    .cc-crumb-link:hover { text-decoration: underline; }
+    .cc-crumb.is-cur { color: #525252; } .cc-crumb-sep { color: #8c8c8c; }
 
     /* dummy 페이지(리소스 목록 자리) */
     .dp h1 { margin: 0 0 0.25rem; font-size: 1.5rem; font-weight: 400; color: #161616; }
@@ -80,7 +88,9 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
       <section class="os-content">
         <nav class="cc-crumbs" aria-label="페이지 경로">
           <ng-container *ngFor="let c of crumbs(); let last = last">
-            <span class="cc-crumb" [class.is-cur]="last">{{ c }}</span>
+            <a *ngIf="c.link === 'home'" class="cc-crumb cc-crumb-link" href="/">{{ c.label }}</a>
+            <a *ngIf="c.link && c.link !== 'home'" class="cc-crumb cc-crumb-link" (click)="crumbNav(c)">{{ c.label }}</a>
+            <span *ngIf="!c.link" class="cc-crumb is-cur">{{ c.label }}</span>
             <span class="cc-crumb-sep" *ngIf="!last">/</span>
           </ng-container>
         </nav>
@@ -126,14 +136,27 @@ export class AppComponent {
     for (const g of this.groups) { const c = g.children.find((x) => x.id === id); if (c) return c.label; }
     return id;
   }
-  private groupOf(id: string): string | null {
-    for (const g of this.groups) if (g.children.some((c) => c.id === id)) return g.label;
+  private groupOf(id: string): Group | null {
+    for (const g of this.groups) if (g.children.some((c) => c.id === id)) return g;
     return null;
   }
   activeLabel(): string { return this.label(this.active()); }
-  readonly crumbs = computed<string[]>(() => {
+  /** 페이지 경로 — 비-현재는 링크(home=콘솔/, overview=셸 루트, group=그룹 첫 항목). */
+  readonly crumbs = computed<{ label: string; link: 'home' | 'overview' | 'group' | null; groupId?: string }[]>(() => {
     const id = this.active();
+    const out: { label: string; link: 'home' | 'overview' | 'group' | null; groupId?: string }[] = [{ label: 'OpenSphere', link: 'home' }];
+    if (id === 'overview') { out.push({ label: 'Shell Template', link: null }); return out; }
+    out.push({ label: 'Shell Template', link: 'overview' });
     const g = this.groupOf(id);
-    return g ? ['Shell Template', g, this.label(id)] : ['Shell Template', this.label(id)];
+    if (g) out.push({ label: g.label, link: 'group', groupId: g.id });
+    out.push({ label: this.label(id), link: null });
+    return out;
   });
+  crumbNav(c: { link: 'home' | 'overview' | 'group' | null; groupId?: string }): void {
+    if (c.link === 'overview') { this.select('overview'); return; }
+    if (c.link === 'group' && c.groupId) {
+      const g = this.groups.find((x) => x.id === c.groupId);
+      if (g?.children[0]) { this.setOpen(g.id, true); this.select(g.children[0].id); }
+    }
+  }
 }
