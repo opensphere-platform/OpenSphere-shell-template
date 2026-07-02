@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ViewEncapsulation, signal, computed } from '@angular/core';
+import { Component, ViewEncapsulation, signal, computed, OnDestroy } from '@angular/core';
 import { ClarityModule } from '@clr/angular';
 import { CarbonIcon } from './carbon-icon';
 import { OverviewComponent } from './overview.component';
@@ -14,6 +14,18 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
 
 // SDK 표준 subShell — Shell Template(컨테이너 섹션 데모). ShadowDom 자체완결.
 // 2단 = OpenSphere AI Hub 표준(Clarity clr-vertical-nav, 흰 배경, 왼쪽 blue bar). 섹션 진입 = overview(규약).
+//
+// ─── URL 상태 표준(모든 subShell 공통 — 이 스켈레톤이 원본) ───
+// subShell은 콘솔 Angular Router의 자식 라우트를 갖지 않는다(콘솔은 `/p/:id`만 소유, §plugin-host.ts).
+// 그래서 탭/뷰 상태는 **`/p/<id>/서브패스` 경로 세그먼트 + pushState/popstate**로 URL에 반영한다
+// (OpenSphere-shell-ai가 원조 — 여기서부터 이 스켈레톤을 복제하는 모든 subShell로 표준을 전파한다).
+// 콘솔의 `pluginHostMatcher`(app.routes.ts)가 `/p/<id>` 아래 임의 서브패스를 전부 PluginHost(id)로
+// 위임하므로, 서브패스가 바뀌어도 `id`가 그대로면 재마운트되지 않는다.
+//   · pushState 자체는 popstate를 발화시키지 않는다(스펙상 실제 traversal에서만 발생) — 이전에 있던
+//     "쿼리+replaceState만" 컨벤션은 이 우려에 대한 근거 없는 과잉 안전장치였다(폐기).
+//   · 브라우저 뒤로/앞으로 가기는 `popstate` 리스너로 지원한다.
+//   · 최초 로드(북마크·새로고침)에서는 `tabFromRoute()`로 URL을 1회 읽어 초기 상태를 복원한다.
+//   · 이후 모든 상태 변경은 `select()`/`syncUrl()` 한 곳을 거친다 — 산발적으로 URL을 건드리지 않는다.
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -108,7 +120,7 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
     </div>
   `,
 })
-export class AppComponent {
+export class AppComponent implements OnDestroy {
   readonly iHome = Home16; readonly iRegistry = ContainerRegistry16; readonly iDoc = Document16;
   readonly groups: Group[] = [
     { id: 'serverless', label: 'Serverless', icon: Code16, children: [
@@ -124,11 +136,47 @@ export class AppComponent {
     ] },
   ];
 
-  readonly active = signal<string>('overview');
+  readonly active = signal<string>(this.tabFromRoute());
   private readonly open = signal<Record<string, boolean>>({ serverless: true, clusters: true });
+  private readonly onPopState = () => this.select(this.tabFromRoute(), false);
   isOpen(id: string): boolean { return !!this.open()[id]; }
   setOpen(id: string, v: boolean): void { this.open.update((m) => ({ ...m, [id]: v })); }
-  select(id: string): void { this.active.set(id); }
+
+  constructor() {
+    window.addEventListener('popstate', this.onPopState);
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('popstate', this.onPopState);
+  }
+
+  /** updateUrl=false는 popstate(이미 URL이 바뀐 뒤)에 대한 반응일 때만 쓴다 — pushState 중복 방지. */
+  select(id: string, updateUrl = true): void {
+    this.active.set(id);
+    if (updateUrl) this.syncUrl(id);
+  }
+
+  /** 유효 탭 id 전체(overview·registry·모든 그룹 자식) — 임의 경로 주입 방지용. */
+  private validTabIds(): Set<string> {
+    const ids = new Set<string>(['overview', 'registry']);
+    for (const g of this.groups) for (const c of g.children) ids.add(c.id);
+    return ids;
+  }
+
+  /** 'shell-template' 세그먼트 뒤(서브패스) → 탭 id. 모르는/빈 값은 overview로 폴백. */
+  private tabFromRoute(): string {
+    const parts = window.location.pathname.split('/').filter(Boolean);
+    const idx = parts.indexOf('shell-template');
+    const t = idx >= 0 ? (parts[idx + 1] ?? '') : '';
+    return this.validTabIds().has(t) ? t : 'overview';
+  }
+
+  /** 경로 세그먼트로 pushState 갱신 — 콘솔 pluginHostMatcher가 서브패스를 전부 위임하므로 재마운트 없음. */
+  private syncUrl(id: string): void {
+    const nextUrl = id === 'overview' ? '/p/shell-template' : `/p/shell-template/${id}`;
+    if (window.location.pathname === nextUrl) return;
+    history.pushState(null, '', nextUrl + window.location.search + window.location.hash);
+  }
 
   private label(id: string): string {
     if (id === 'overview') return 'Overview';
