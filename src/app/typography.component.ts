@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { FONT_FAMILIES } from '@triangles/design-kit';
 
 interface TypeRole {
   role: string; sample: string; sizeRem: number; sizePx: number; weight: number; family: 'sans' | 'mono';
@@ -65,8 +66,9 @@ const CARBON_SCALE = [
       <table class="ty-table">
         <thead><tr><th>용도</th><th>font-family</th><th>웨이트</th><th>로딩</th></tr></thead>
         <tbody>
-          <tr><td>본문(Sans)</td><td class="ty-ff">"IBM Plex Sans", "IBM Plex Sans KR"</td><td>300 · 400 · 500 · 600 · 700</td><td rowspan="2">Google Fonts CDN<br/><code>fonts.googleapis.com</code>(콘솔 styles.scss)</td></tr>
-          <tr><td>코드(Mono)</td><td class="ty-ff">"IBM Plex Mono"</td><td>400 · 600</td></tr>
+          <tr *ngFor="let f of fontFamilies">
+            <td>{{ f.usage }}</td><td class="ty-ff">{{ f.family }}</td><td>{{ f.weights }}</td><td>{{ f.loading }}</td>
+          </tr>
         </tbody>
       </table>
       <div class="ty-tokens">
@@ -157,6 +159,7 @@ const CARBON_SCALE = [
   `],
 })
 export class TypographyPageComponent {
+  readonly fontFamilies = FONT_FAMILIES;
   readonly roles = ROLES;
   readonly carbonScale = CARBON_SCALE;
 
