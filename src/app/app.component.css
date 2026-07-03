@@ -1,12 +1,13 @@
 /* 자체완결(Shadow DOM): Clarity 전체 CSS를 shadow root 안으로 가져온다(셸 문서 스타일은 경계를 못 뚫음). */
 @import '@clr/ui/clr-ui.min.css';
+/* IBM Plex 폰트 토큰 + Clarity heading(h1/h2/h3) 오버라이드 — @triangles/design-kit(공유 킷)이 SSOT. */
+@import '@triangles/design-kit/src/font-tokens.css';
 
 :host {
   display: block;
   height: 100%;
   /* 셸 상속 누수 차단 → Clarity 기본 타이포 고정 */
   line-height: 1.428571429;
-  font-family: "IBM Plex Sans", "IBM Plex Sans KR", Metropolis, "Avenir Next", "Helvetica Neue", Arial, sans-serif;
   font-size: 0.875rem;
   color: #161616;
 }

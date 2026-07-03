@@ -4,6 +4,7 @@
 *.md
 rbac.yaml
 uipluginpackage.yaml
-node_modules
+node_modules/*
+!node_modules/@triangles
 dist
 .angular

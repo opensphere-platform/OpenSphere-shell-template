@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component, ViewEncapsulation, signal, computed, OnDestroy } from '@angular/core';
 import { ClarityModule } from '@clr/angular';
-import { CarbonIcon } from './carbon-icon';
+import { CarbonIcon } from '@triangles/design-kit';
 import { OverviewComponent } from './overview.component';
+import { IconsPageComponent } from './icons.component';
+import { TypographyPageComponent } from './typography.component';
 import Home16 from '@carbon/icons/es/home/16';
 import Code16 from '@carbon/icons/es/code/16';
 import Kubernetes16 from '@carbon/icons/es/kubernetes/16';
 import ContainerRegistry16 from '@carbon/icons/es/container-registry/16';
 import Document16 from '@carbon/icons/es/document/16';
+import ColorPalette16 from '@carbon/icons/es/color-palette/16';
 
 interface Leaf { id: string; label: string }
 interface Group { id: string; label: string; icon: any; children: Leaf[] }
@@ -29,7 +32,7 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [CommonModule, ClarityModule, CarbonIcon, OverviewComponent],
+  imports: [CommonModule, ClarityModule, CarbonIcon, OverviewComponent, IconsPageComponent, TypographyPageComponent],
   encapsulation: ViewEncapsulation.ShadowDom,
   styleUrls: ['./app.component.css'],
   styles: [`
@@ -108,7 +111,9 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
         </nav>
 
         <app-overview *ngIf="active() === 'overview'" />
-        <div class="dp" *ngIf="active() !== 'overview'">
+        <app-icons-page *ngIf="active() === 'ds-icons'" />
+        <app-typography-page *ngIf="active() === 'ds-typography'" />
+        <div class="dp" *ngIf="isDummyPage()">
           <h1>{{ activeLabel() }}</h1>
           <p class="dp-sub">{{ activeLabel() }} — 더미 페이지(2단 내비·active 검증용 / 템플릿 예시).</p>
           <table class="dp-table">
@@ -134,10 +139,14 @@ export class AppComponent implements OnDestroy {
       { id: 'cm-reservations', label: 'Reservations' },
       { id: 'cm-helm', label: 'Helm catalog' },
     ] },
+    { id: 'design-system', label: 'Design System', icon: ColorPalette16, children: [
+      { id: 'ds-icons', label: 'Icons' },
+      { id: 'ds-typography', label: 'Typography' },
+    ] },
   ];
 
   readonly active = signal<string>(this.tabFromRoute());
-  private readonly open = signal<Record<string, boolean>>({ serverless: true, clusters: true });
+  private readonly open = signal<Record<string, boolean>>({ serverless: true, clusters: true, 'design-system': true });
   private readonly onPopState = () => this.select(this.tabFromRoute(), false);
   isOpen(id: string): boolean { return !!this.open()[id]; }
   setOpen(id: string, v: boolean): void { this.open.update((m) => ({ ...m, [id]: v })); }
@@ -154,6 +163,11 @@ export class AppComponent implements OnDestroy {
   select(id: string, updateUrl = true): void {
     this.active.set(id);
     if (updateUrl) this.syncUrl(id);
+  }
+
+  /** 실제 콘텐츠 컴포넌트가 있는 탭(overview·ds-icons·ds-typography)은 더미 폴백에서 제외. */
+  isDummyPage(): boolean {
+    return !['overview', 'ds-icons', 'ds-typography'].includes(this.active());
   }
 
   /** 유효 탭 id 전체(overview·registry·모든 그룹 자식) — 임의 경로 주입 방지용. */

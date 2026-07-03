@@ -6,6 +6,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
+# @triangles/design-kit는 private git 의존성 — 이 alpine 빌드 샌드박스엔 git도 자격증명도 없다.
+# 호스트(자격증명 있음)에서 이미 npm install로 resolve된 것을 그대로 vendoring해 Docker가 clone을 아예 시도 안 하게 한다.
+COPY node_modules/@triangles ./node_modules/@triangles
 RUN npm install --no-audit --no-fund
 COPY angular.json tsconfig.json tsconfig.app.json ./
 COPY src ./src
