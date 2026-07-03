@@ -135,7 +135,7 @@ const CARBON_SCALE = [
     .ty-note-p code { background: #eef0f3; padding: 0.05rem 0.3rem; border-radius: 3px; font-size: 0.85em; }
 
     .ty-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e0e0e0; margin-bottom: 0.7rem; }
-    .ty-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: #6f6f6f; background: #f4f4f4; padding: 0.55rem 0.8rem; border-bottom: 1px solid #e0e0e0; }
+    .ty-table th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: #525252; background: #e0e0e0; padding: 0.55rem 0.8rem; border-bottom: 1px solid #c6c6c6; }
     .ty-table td { padding: 0.55rem 0.8rem; font-size: 0.82rem; color: #161616; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
     .ty-table--compact td, .ty-table--compact th { padding: 0.4rem 0.8rem; font-size: 0.78rem; }
     .ty-ff { font-family: var(--os-font-mono, 'Courier New', monospace); }
