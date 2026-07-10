@@ -6,19 +6,24 @@ metadata:
   name: shell-template
   namespace: opensphere-system
 spec:
+  kind: subShell
+  hostRef: main
+  hostApiVersion: "1.0.0"
+  hostCompat: ">=1.0.0 <2.0.0"
+  serviceAccountName: opensphere-shell-template
   displayName: "Shell Template"
   owner: platform-experience
   version: 0.1.0
   description: "Shell Template — OpenSphere subShell (SDK 표준 골격)"
   image:
-    repository: localhost:5000/shell-template
-    digest: v3
+    repository: shell-template
+    digest: sha256:9c234f2c2d8c949abceb3d4b868d4eb1d020069ed61e7e11c339c700c2758bd8
   nav:
     band: "구축 Build"
     label: "Shell Template"
   manifest:
     path: /plugins/ui-shell.manifest.json
-    sha256: "882a95411a55941f0a6e41fa0160b8d4451a73f932e68b33b1ac5f6f6edf1f05"
+    sha256: "6905a405328324f5b2c0717b29aa6aec96e758b9fe3e28fe543b2a94cbcfc0ed"
     signaturePath: /plugins/ui-shell.manifest.json.sig
   trust:
     keyId: opensphere-plugins-v1
@@ -28,6 +33,15 @@ spec:
     - api:proxy
   api:
     basePath: /api/plugins/shell-template
+  contributions:
+    page: { enabled: true }
+    navigation: { enabled: false, mode: "none", reason: "Shell Template owns navigation inside its page" }
+    api: { enabled: true, basePath: "/api/plugins/shell-template" }
+    cli: { enabled: false, reason: "Shell Template CLI manifest is not published" }
+    manual: { enabled: false, mode: "none", reason: "Shell Template Manual contribution is not published" }
+    search: { enabled: false, mode: "none", reason: "Shell Template search contribution is not published" }
+    notification: { enabled: false, frontend: false, backend: false, reason: "Shell Template notification contribution is not published" }
+    observability: { enabled: false, logs: false, metrics: false, traces: false, reason: "Shell Template observability contract is not published" }
 ---
 apiVersion: plugins.opensphere.io/v1alpha1
 kind: UIPluginRegistration

@@ -1,21 +1,67 @@
 {
-  "manifestVersion": 2,
+  "manifestVersion": 3,
   "kind": "subShell",
   "id": "shell-template",
+  "hostRef": "main",
+  "hostApiVersion": "1.0.0",
+  "hostCompat": ">=1.0.0 <2.0.0",
   "version": "0.1.0",
   "title": "Shell Template",
-  "description": "OpenSphere subShell — Shell Template (SDK 표준 골격).",
+  "description": "OpenSphere Shell Template subShell.",
   "entry": "ui-shell.plugin.js",
-  "entrySha256": "ccdccf361934c7cb15de258a18e862da0353273614c12e477d95de99a3c7816e",
+  "entrySha256": "a4c08789ed5b2a77639a954bb5353195ea8ffa8f363305f92094f990a70ff10d",
   "shellCompat": ">=0.2.0 <0.9.0",
+  "sdkVersion": "0.3.6",
   "permissions": [
     "page:register",
     "api:proxy"
   ],
   "nav": {
-    "band": "구축 Build",
+    "band": "운영 Operate",
     "label": "Shell Template"
   },
   "designSystem": "clarity",
-  "apiBase": "/api/plugins/shell-template"
+  "apiBase": "/api/plugins/shell-template",
+  "renderMode": "esm",
+  "contributions": {
+    "page": {
+      "enabled": true
+    },
+    "navigation": {
+      "enabled": false,
+      "mode": "none",
+      "reason": "Shell Template owns navigation inside its page"
+    },
+    "api": {
+      "enabled": true,
+      "basePath": "/api/plugins/shell-template"
+    },
+    "cli": {
+      "enabled": false,
+      "reason": "Shell Template CLI manifest is not published"
+    },
+    "manual": {
+      "enabled": false,
+      "mode": "none",
+      "reason": "Shell Template Manual contribution is not published"
+    },
+    "search": {
+      "enabled": false,
+      "mode": "none",
+      "reason": "Shell Template search contribution is not published"
+    },
+    "notification": {
+      "enabled": false,
+      "frontend": false,
+      "backend": false,
+      "reason": "Shell Template notification contribution is not published"
+    },
+    "observability": {
+      "enabled": false,
+      "logs": false,
+      "metrics": false,
+      "traces": false,
+      "reason": "Shell Template observability contract is not published"
+    }
+  }
 }

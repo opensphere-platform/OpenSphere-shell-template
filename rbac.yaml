@@ -1,5 +1,9 @@
 # Perspective 2 K8s Cluster — 구 k8s-console-ng RBAC 전체 흡수(누락 없이): 광범위 read-only(인벤토리 28종) + impersonate.
 # secrets는 의도적으로 제외(보안 기조 + 프록시도 차단). 쓰기는 검증된 사용자 임퍼소네이션(SA 자체 write 없음).
+apiVersion: v1
+kind: ServiceAccount
+metadata: { name: opensphere-shell-template, namespace: opensphere-system }
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata: { name: shell-template-reader }
@@ -69,4 +73,4 @@ kind: ClusterRoleBinding
 metadata: { name: shell-template-reader-system }
 roleRef: { apiGroup: rbac.authorization.k8s.io, kind: ClusterRole, name: shell-template-reader }
 subjects:
-  - { kind: ServiceAccount, name: default, namespace: opensphere-system }
+  - { kind: ServiceAccount, name: opensphere-shell-template, namespace: opensphere-system }
