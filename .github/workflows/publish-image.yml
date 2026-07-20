@@ -145,5 +145,16 @@ jobs:
         run: |
           set -euo pipefail
           crane auth login ghcr.io -u "${{ github.actor }}" -p "$GH_TOKEN"
+          release_epoch="$(git show -s --format=%ct "$GITHUB_SHA")"
+          release_tag="$(TZ=Asia/Seoul date -d "@$release_epoch" +%Y%m%d%H%M)"
+          [[ "$release_tag" =~ ^[0-9]{12}$ ]]
+          existing="$(crane digest "${IMAGE}:${release_tag}" 2>/dev/null || true)"
+          if [[ -n "$existing" && "$existing" != "$DIGEST" ]]; then
+            echo "Immutable release tag collision: ${IMAGE}:${release_tag} is $existing, expected $DIGEST" >&2
+            exit 1
+          fi
+          crane tag "${IMAGE}@${DIGEST}" "$release_tag"
+          test "$(crane digest "${IMAGE}:${release_tag}")" = "$DIGEST"
           crane tag "${IMAGE}@${DIGEST}" edge
           test "$(crane digest "${IMAGE}:edge")" = "$DIGEST"
+          echo "- \`${IMAGE}:${release_tag}\` → \`${DIGEST}\`" >> "$GITHUB_STEP_SUMMARY"
