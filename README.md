@@ -1,49 +1,66 @@
-# OpenSphere-shell-shell-template
+# OpenSphere Shell Template
 
-OpenSphere V2 **subShell** — Shell Template. **독자적·온전한 Angular 22 프로젝트** (SDK 표준 빈 골격 `_skeleton`에서 인스턴스화).
+OpenSphere Main Shell에 연결되는 최소권한 subShell 표본입니다. Angular 22와 Clarity 18로 UI를 구성하고, 서명된 OCI module package를 `os extensions` 경로로만 설치합니다.
 
-| 측면 | 값 |
+## 설치 계약
+
+| 항목 | 값 |
 |---|---|
-| 기술 식별자 | `shell-template` (RFC1123 kebab) — route `/p/shell-template`, proxy `/api/plugins/shell-template` |
-| 표시명 | `Shell Template` |
-| 프런트엔드 | Angular 22 + Clarity 18, **Angular Element `<osp-shell-template-shell>`** |
-| 백엔드 | `server.js` — 제네릭 `/api/k8s/*` 프록시(secrets 차단) + WS exec 게이트웨이 + 정적 서빙 (런타임 dep = `ws`만) |
-| 종류 | subShell (1급 host-guest) |
+| Module ID | `shell-template` |
+| Kind / host | `subShell` / `main` |
+| Console route | `/p/shell-template` |
+| API base | `/api/plugins/shell-template` |
+| Permission profile | `none` |
+| OCI image | `ghcr.io/opensphere-platform/opensphere-shell-template` |
+| Channel | `edge` → `candidate` → `stable` |
+| Runtime | non-root Node.js, port `8080`, `/healthz` |
 
-## 구조 (루트 Angular 프로젝트 + 배포 배선)
-```
-angular.json · tsconfig*.json · package.json · package-lock.json   ← Angular 22 프로젝트
-src/                                                                ← 앱 소스 (골격: main.ts·app.component.ts·app.config.ts placeholder)
-server.js                                                           ← 백엔드 피처 컨테이너 (K8s 프록시 + WS exec + /app 서빙)
-ui-shell/  (ui-shell.plugin.js + manifest)                          ← 셸 플러그인 진입점 (Angular Element 주입, ManifestV2). ⚠️빈 골격은 미서명(.sig 없음)
-Dockerfile (멀티스테이지)                                            ← ng build → dist/shell-template/browser → /app/www
-uipluginpackage.yaml · rbac.yaml · kanidm-ca.crt                     ← DUPA 설치계약 · RBAC · CA
-```
+`rbac.yaml`과 직접 적용용 `UIPluginPackage` YAML은 의도적으로 제공하지 않습니다. Controller가 검증된 ModulePackageV1 descriptor로 ServiceAccount, Deployment, Service, PDB와 Registry registration을 생성합니다.
 
-## 로컬 개발
+## 활성화되는 통합
+
+- Page contribution: `/p/shell-template`
+- API contribution: `/api/plugins/shell-template`
+- Main Shell Registry, proxy, lifecycle, rollback, audit
+
+Navigation, CLI, Manual, Search, Notification, Observability contribution은 구현되지 않았으며 manifest에 명시적으로 `disabled`로 선언합니다.
+
+## 로컬 검증
+
 ```bash
-npm install
-npm run build          # ng build --configuration production → dist/shell-template/browser (main.js·styles.css, outputHashing=none)
-npm run serve:backend  # node server.js (PLUGINS_DIR/WWW_DIR/PORT env)
-# 또는 ng serve (npm start) 로 프런트만
+npm ci
+npm test
+npm run build
 ```
 
-## 빌드/배포 (단일 이미지)
+서명 패키지 재생성에는 OpenSphere SDK build와 승인된 P-256 개인키가 필요합니다.
+
 ```bash
-docker build -t localhost:5000/shell-template:<tag> .
-docker push localhost:5000/shell-template:<tag>
+npm --prefix ../OpenSphere-SDK install
+npm --prefix ../OpenSphere-SDK run build
+DUPA_SIGNING_KEY=/secure/opensphere-plugins-v5.pem \
+DUPA_SIGNING_KEY_ID=opensphere-plugins-v5 \
+npm run package:module
 ```
-멀티스테이지: stage1이 Angular를 빌드(`browser/main.js`), stage2가 `server.js` + 빌드본 + ui-shell + `ws`로 런타임 이미지 구성.
 
-## DUPA 자동등록
-`dupa-registry-controller`가 `uipluginpackage.yaml` reconcile → 서명검증(trust keyId `opensphere-plugins-v1`) → Deployment/Service 생성 → `/registry/plugins.json` 전사 → 메인 셸(opensphere-console)이 동적으로 nav 밴드·라우트·페이지 등록 (**셸 무수정**).
+## 게시와 설치
 
-## 서명 (빈 골격 → 인스턴스화 후 1회 필수)
-빈 골격은 미서명 상태(`ui-shell.manifest.json.sig` 없음, `uipluginpackage.yaml` sha256=`REPLACE_ON_SIGN`)로 출하된다. 인스턴스화 후 재서명:
+`main` push 또는 GitHub Actions 수동 실행은 다음 순서로 `edge`를 게시합니다.
+
+1. 테스트와 Angular production build
+2. ModulePackageV1 재생성·서명
+3. `linux/amd64`, `linux/arm64` OCI index build
+4. platform별 descriptor/signature/source/revision label 동일성 검증
+5. GitHub SLSA provenance 및 SPDX SBOM attestation
+6. 모든 gate 통과 후 `edge` tag 이동
+
+관리자 설치:
+
+```bash
+os extensions inspect ghcr.io/opensphere-platform/opensphere-shell-template:edge
+os extensions install ghcr.io/opensphere-platform/opensphere-shell-template:edge \
+  --reason "Shell Template edge 검증 설치"
+os extensions activate shell-template
 ```
-node <console>/perspectives/_resign.mjs . <durable-key.pem>
-```
-`ui-shell.plugin.js`의 `entrySha256` 산출 + manifest 서명 + `uipluginpackage.yaml` sha256 핀 자동 갱신.
 
----
-*SDK 표준 골격 출처: `OpenSphere-shell-clusterManager` (완전한 SDK 표준 Angular subShell) — 2026-06-26 빌드/런타임 골격을 추출·파라미터화(`shell-template`/`Shell Template`/`osp-shell-template-shell`).*
+`edge`는 선택 포인터이며 실제 workload에는 검증된 immutable digest가 기록됩니다.

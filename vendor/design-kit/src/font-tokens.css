@@ -1,0 +1,6 @@
+:host {
+  --clr-metropolis-font-family: var(--os-font, "IBM Plex Sans", "IBM Plex Sans KR", Metropolis, "Avenir Next", "Helvetica Neue", Arial, sans-serif);
+  --cds-alias-typography-font-family: var(--clr-metropolis-font-family);
+  --cds-alias-typography-header-font-family: var(--clr-metropolis-font-family);
+  font-family: var(--clr-metropolis-font-family);
+}

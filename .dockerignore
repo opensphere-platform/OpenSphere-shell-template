@@ -2,9 +2,6 @@
 .gitignore
 .gitattributes
 *.md
-rbac.yaml
-uipluginpackage.yaml
-node_modules/*
-!node_modules/@triangles
+node_modules
 dist
 .angular
