@@ -1,7 +1,9 @@
+# syntax=docker/dockerfile:1
 # OpenSphere subShell: shell-template — signed OCI reference implementation.
 ARG OS_MODULE_DESCRIPTOR
 ARG OS_MODULE_SIGNATURE
-FROM docker.io/library/node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
+ARG BUILDPLATFORM
+FROM --platform=$BUILDPLATFORM docker.io/library/node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY vendor ./vendor
