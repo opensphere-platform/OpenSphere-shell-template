@@ -34,7 +34,8 @@ const descriptor = {
   hostApiVersion: manifest.hostApiVersion,
   hostCompat: manifest.hostCompat,
   shellCompat: manifest.shellCompat,
-  sdkVersion: '0.2.0',
+  sdkVersion: manifest.sdkVersion,
+  nav: manifest.nav,
   permissions: manifest.permissions,
   permissionProfile: 'none',
   runtime: {
@@ -47,6 +48,22 @@ const descriptor = {
       cpuLimit: '200m',
       memoryLimit: '128Mi',
     },
+    security: {
+      automountServiceAccountToken: false,
+      runAsNonRoot: true,
+      runAsUser: 1000,
+      runAsGroup: 1000,
+      readOnlyRootFilesystem: true,
+      seccompProfile: 'RuntimeDefault',
+    },
+    availability: {
+      replicas: 2,
+      minAvailable: 1,
+      topologySpread: true,
+      autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4, targetCPUUtilization: 70 },
+    },
+    networkPolicy: { enabled: true, allowMonitoring: true },
+    observability: { metricsPath: '/metrics', scrapeInterval: '30s' },
   },
   manifest: {
     path: '/plugins/ui-shell.manifest.json',

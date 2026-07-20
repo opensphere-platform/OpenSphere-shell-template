@@ -13,16 +13,28 @@ test('declares the canonical main-shell route and API surface', () => {
   assert.equal(manifest.kind, 'subShell');
   assert.equal(manifest.hostRef, 'main');
   assert.equal(manifest.apiBase, '/api/plugins/shell-template');
-  assert.deepEqual(manifest.permissions, ['page:register', 'api:proxy']);
+  assert.deepEqual(manifest.permissions, [
+    'page:register', 'api:proxy', 'nav:contribute', 'search:contribute',
+    'manual:contribute', 'notify:publish',
+  ]);
+  assert.equal(manifest.nav.band, '구축 Build');
 });
 
-test('declares every optional contribution truthfully', () => {
+test('implements every production integration contract', () => {
   assert.equal(manifest.contributions.page.enabled, true);
   assert.equal(manifest.contributions.api.enabled, true);
   for (const name of ['navigation', 'cli', 'manual', 'search', 'notification', 'observability']) {
-    assert.equal(manifest.contributions[name].enabled, false, `${name} must remain explicitly disabled`);
-    assert.ok(manifest.contributions[name].reason, `${name} must explain why it is disabled`);
+    assert.equal(manifest.contributions[name].enabled, true, `${name} must be implemented`);
   }
+  assert.equal(manifest.contributions.cli.namespace, 'template');
+  assert.equal(manifest.contributions.cli.manifestPath, '/cli/manifest');
+  assert.equal(manifest.contributions.manual.sourceId, 'plugin:shell-template');
+  assert.equal(manifest.contributions.notification.frontend, true);
+  assert.equal(manifest.contributions.notification.backend, false);
+  assert.deepEqual(
+    [manifest.contributions.observability.logs, manifest.contributions.observability.metrics, manifest.contributions.observability.traces],
+    [true, true, true],
+  );
 });
 
 test('contains no legacy cluster privilege artifacts', () => {
@@ -30,4 +42,15 @@ test('contains no legacy cluster privilege artifacts', () => {
   assert.equal(fs.existsSync(path.join(root, 'uipluginpackage.yaml')), false);
   const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
   assert.doesNotMatch(server, /kubernetes\.default\.svc|Impersonate-|\/api\/k8s|k8s-exec/);
+});
+
+test('ships the runtime manual and all host contribution implementations', () => {
+  const entry = fs.readFileSync(path.join(root, 'ui-shell', 'ui-shell.plugin.js'), 'utf8');
+  const manual = fs.readFileSync(path.join(root, 'ui-shell', 'manual', 'shell-template.ko.md'), 'utf8');
+  assert.match(entry, /extensions\.nav\?\.contribute/);
+  assert.match(entry, /extensions\.search\?\.contribute/);
+  assert.match(entry, /extensions\.manual\.contribute/);
+  assert.match(entry, /notify\?\.publish/);
+  assert.match(manual, /Log 통합/);
+  assert.match(manual, /os template status/);
 });

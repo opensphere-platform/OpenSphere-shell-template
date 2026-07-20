@@ -17,7 +17,7 @@ ARG OS_MODULE_DESCRIPTOR
 ARG OS_MODULE_SIGNATURE
 RUN apk upgrade --no-cache
 LABEL org.opencontainers.image.title="OpenSphere Shell Template" \
-      org.opencontainers.image.version="0.1.0-edge.1" \
+      org.opencontainers.image.version="0.2.0-edge.1" \
       org.opencontainers.image.source="https://github.com/opensphere-platform/OpenSphere-shell-template" \
       io.opensphere.module.descriptor=$OS_MODULE_DESCRIPTOR \
       io.opensphere.module.descriptor.signature=$OS_MODULE_SIGNATURE \
@@ -27,7 +27,7 @@ COPY --chmod=0644 server.js /app/server.js
 COPY ui-shell/ /app/plugins/
 COPY --from=build /app/dist/shell-template/browser /app/www
 ENV PLUGINS_DIR=/app/plugins WWW_DIR=/app/www PORT=8080 \
-    APP_VERSION=0.1.0-edge.1
+    APP_VERSION=0.2.0-edge.1
 EXPOSE 8080
 USER 1000
 CMD ["node", "/app/server.js"]

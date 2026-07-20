@@ -5,19 +5,23 @@
   "hostRef": "main",
   "hostApiVersion": "1.0.0",
   "hostCompat": ">=1.0.0 <2.0.0",
-  "version": "0.1.0-edge.1",
+  "version": "0.2.0-edge.1",
   "title": "Shell Template",
   "description": "OpenSphere Shell Template subShell.",
   "entry": "ui-shell.plugin.js",
   "entrySha256": "a4c08789ed5b2a77639a954bb5353195ea8ffa8f363305f92094f990a70ff10d",
   "shellCompat": ">=0.2.0 <0.9.0",
-  "sdkVersion": "0.2.0",
+  "sdkVersion": "0.3.0",
   "permissions": [
     "page:register",
-    "api:proxy"
+    "api:proxy",
+    "nav:contribute",
+    "search:contribute",
+    "manual:contribute",
+    "notify:publish"
   ],
   "nav": {
-    "band": "운영 Operate",
+    "band": "구축 Build",
     "label": "Shell Template"
   },
   "designSystem": "clarity",
@@ -28,40 +32,38 @@
       "enabled": true
     },
     "navigation": {
-      "enabled": false,
-      "mode": "none",
-      "reason": "Shell Template owns navigation inside its page"
+      "enabled": true,
+      "mode": "runtime"
     },
     "api": {
       "enabled": true,
       "basePath": "/api/plugins/shell-template"
     },
     "cli": {
-      "enabled": false,
-      "reason": "Shell Template CLI manifest is not published"
+      "enabled": true,
+      "namespace": "template",
+      "manifestPath": "/cli/manifest"
     },
     "manual": {
-      "enabled": false,
-      "mode": "none",
-      "reason": "Shell Template Manual contribution is not published"
+      "enabled": true,
+      "sourceId": "plugin:shell-template",
+      "mode": "runtime"
     },
     "search": {
-      "enabled": false,
-      "mode": "none",
-      "reason": "Shell Template search contribution is not published"
+      "enabled": true,
+      "mode": "runtime"
     },
     "notification": {
-      "enabled": false,
-      "frontend": false,
+      "enabled": true,
+      "frontend": true,
       "backend": false,
-      "reason": "Shell Template notification contribution is not published"
+      "reason": "Reference template publishes lifecycle state through the host-owned frontend notification seam"
     },
     "observability": {
-      "enabled": false,
-      "logs": false,
-      "metrics": false,
-      "traces": false,
-      "reason": "Shell Template observability contract is not published"
+      "enabled": true,
+      "logs": true,
+      "metrics": true,
+      "traces": true
     }
   }
 }

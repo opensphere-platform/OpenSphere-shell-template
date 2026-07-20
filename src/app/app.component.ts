@@ -97,7 +97,7 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
         <a clrVerticalNavLink [class.active]="active() === 'registry'" (click)="select('registry')" (keydown.enter)="select('registry')">
           <os-cicon clrVerticalNavIcon class="os-tree-ic" [icon]="iRegistry" [size]="16" />Container Registry
         </a>
-        <a clrVerticalNavLink href="#docs" (click)="$event.preventDefault()">
+        <a clrVerticalNavLink href="/manual">
           <os-cicon clrVerticalNavIcon class="os-tree-ic" [icon]="iDoc" [size]="16" />Docs
         </a>
       </clr-vertical-nav>
