@@ -1,6 +1,6 @@
 {
   "name": "shell-template",
-  "version": "0.2.0-edge.1",
+  "version": "0.2.1-edge.1",
   "description": "OpenSphere subShell reference package. Angular 22 + Clarity 18, exported as Angular Element <osp-shell-template-shell> and installed through the signed OCI extension pipeline.",
   "private": true,
   "scripts": {

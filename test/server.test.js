@@ -34,7 +34,7 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   assert.deepEqual(await info.json(), {
     id: 'shell-template',
     kind: 'subShell',
-    version: '0.2.0-edge.1',
+    version: '0.2.1-edge.1',
     hostRef: 'main',
     permissionProfile: 'none',
   });
@@ -59,5 +59,36 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   const metrics = await fetch(`http://127.0.0.1:${port}/metrics`);
   const exposition = await metrics.text();
   assert.match(exposition, /opensphere_subshell_http_requests_total/);
-  assert.match(exposition, /opensphere_subshell_ready\{service="shell-template",version="0\.2\.0-edge\.1"\} 1/);
+  assert.match(exposition, /opensphere_subshell_ready\{service="shell-template",version="0\.2\.1-edge\.1"\} 1/);
+});
+
+test('emits collector-ready OpenSphere v1 JSON without leaking bearer credentials', async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'shell-template-log-test-'));
+  process.env.PLUGINS_DIR = directory;
+  process.env.WWW_DIR = directory;
+  const records = [];
+  const original = console.log;
+  console.log = (line) => records.push(String(line));
+  t.after(() => { console.log = original; });
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
+
+  const secret = 'Bearer do-not-log-this-credential';
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/contract`, {
+    headers: { authorization: secret, 'x-os-operation-id': 'log-contract-test' },
+  });
+  assert.equal(response.status, 200);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(records.length, 1);
+  assert.doesNotMatch(records[0], /do-not-log-this-credential/);
+  const record = JSON.parse(records[0]);
+  for (const field of [
+    'schema', 'timestamp', 'severity', 'service', 'consumerId', 'environment', 'namespace', 'pod',
+    'resourceKind', 'resourceName', 'message', 'correlationId', 'operationId', 'traceId', 'actorType',
+  ]) assert.ok(Object.hasOwn(record, field), `${field} is required`);
+  assert.equal(record.schema, 'opensphere.v1');
+  assert.equal(record.operationId, 'log-contract-test');
+  assert.equal(record.actorType, 'user');
 });

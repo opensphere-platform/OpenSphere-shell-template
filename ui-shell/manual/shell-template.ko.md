@@ -18,6 +18,10 @@
 
 `timestamp`, `severity`, `service`, `consumerId`, `environment`, `namespace`, `resourceKind`, `resourceName`, `message`, `correlationId`, `operationId`, `traceId`, `actorType`
 
+모든 로그는 `schema=opensphere.v1`인 단일행 JSON으로 컨테이너 stdout에 기록됩니다. PFS 로그 수집기가
+설치되면 Extension Host가 부착한 `opensphere.io/log-*` 메타데이터로 중앙 로그에 편입됩니다. 수집기가
+없는 경우에는 Kubernetes 컨테이너 로그만 사용할 수 있으며 장기 보존은 준비되지 않은 상태입니다.
+
 Main Shell이 전달한 `X-OS-Correlation-ID`, `X-OS-Operation-ID`, `traceparent`를 유지하며, 없을 때만 안전한 새 식별자를 생성합니다. 토큰·쿠키·비밀번호·본문은 로그에 기록하지 않습니다.
 
 ## Metric과 Trace

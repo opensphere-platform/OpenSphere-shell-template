@@ -46,6 +46,12 @@ HTTP 요청은 한 줄 JSON으로 stdout에 기록합니다. 다음 필드는 �
 `timestamp`, `severity`, `service`, `consumerId`, `environment`, `namespace`,
 `resourceKind`, `resourceName`, `message`, `correlationId`, `operationId`, `traceId`, `actorType`
 
+각 레코드는 `schema=opensphere.v1`, `pod`, `status`, `durationMs`를 함께 기록합니다. 로그는 컨테이너
+`stdout`으로만 출력하며 파일이나 ConfigMap에 이중 저장하지 않습니다. Extension Host가
+`opensphere.io/log-*` 수집 메타데이터를 Pod에 부착하므로 PFS 관측 수집기(Loki/Vector/OTel 등)가
+설치되면 재배포 없이 중앙 수집 대상으로 발견할 수 있습니다. 수집기가 없는 환경에서는 Kubernetes
+컨테이너 로그만 권위이며 중앙 보존이 활성화되었다고 주장하지 않습니다.
+
 Main Shell이 전달한 `x-correlation-id`, `x-operation-id`, `traceparent`를 보존하고, 없는 값은 안전하게
 생성해 응답 헤더에도 돌려줍니다. 비밀·토큰·본문 전체는 로그에 남기지 않습니다.
 

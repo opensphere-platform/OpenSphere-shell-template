@@ -63,7 +63,12 @@ const descriptor = {
       autoscaling: { enabled: true, minReplicas: 2, maxReplicas: 4, targetCPUUtilization: 70 },
     },
     networkPolicy: { enabled: true, allowMonitoring: true },
-    observability: { metricsPath: '/metrics', scrapeInterval: '30s' },
+    observability: {
+      metricsPath: '/metrics',
+      scrapeInterval: '30s',
+      logs: { format: 'json', schema: 'opensphere.v1', stream: 'stdout' },
+      traces: { propagation: 'w3c', responseHeaders: true },
+    },
   },
   manifest: {
     path: '/plugins/ui-shell.manifest.json',

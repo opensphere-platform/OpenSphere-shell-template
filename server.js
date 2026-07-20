@@ -8,10 +8,12 @@ const { randomBytes, randomUUID } = require('crypto');
 const PORT = Number(process.env.PORT || 8080);
 const PLUGINS = path.resolve(process.env.PLUGINS_DIR || '/app/plugins');
 const WWW = path.resolve(process.env.WWW_DIR || '/app/www');
-const VERSION = process.env.APP_VERSION || '0.2.0-edge.1';
+const VERSION = process.env.APP_VERSION || '0.2.1-edge.1';
 const SERVICE = 'shell-template';
 const ENVIRONMENT = process.env.OSP_ENVIRONMENT || 'development';
 const NAMESPACE = process.env.POD_NAMESPACE || readOptional('/var/run/secrets/kubernetes.io/serviceaccount/namespace') || 'opensphere-console';
+const POD_NAME = process.env.POD_NAME || 'local';
+const LOG_SCHEMA = process.env.OSP_LOG_SCHEMA || 'opensphere.v1';
 
 const MIME = Object.freeze({
   '.js': 'text/javascript',
@@ -52,12 +54,14 @@ function traceId(req) {
 
 function requestContext(req, route) {
   return {
+    schema: LOG_SCHEMA,
     timestamp: new Date().toISOString(),
     severity: 'info',
     service: SERVICE,
     consumerId: 'opensphere-console',
     environment: ENVIRONMENT,
     namespace: NAMESPACE,
+    pod: POD_NAME,
     resourceKind: 'HTTPRoute',
     resourceName: route,
     message: '',
@@ -70,12 +74,14 @@ function requestContext(req, route) {
 
 function log(event) {
   console.log(JSON.stringify({
+    schema: LOG_SCHEMA,
     timestamp: new Date().toISOString(),
     severity: 'info',
     service: SERVICE,
     consumerId: 'opensphere-console',
     environment: ENVIRONMENT,
     namespace: NAMESPACE,
+    pod: POD_NAME,
     resourceKind: 'Process',
     resourceName: SERVICE,
     message: '',
@@ -231,7 +237,11 @@ function createServer() {
         standard: 'OpenSphere subShell reference template',
         capabilities: ['page:register', 'api:proxy', 'nav:contribute', 'search:contribute', 'manual:contribute', 'notify:publish'],
         contributions: CONTRIBUTIONS,
-        observability: { logs: 'structured-json', metrics: '/metrics', traces: 'W3C traceparent + x-os-trace-id' },
+        observability: {
+          logs: { format: 'json', schema: LOG_SCHEMA, stream: process.env.OSP_LOG_STREAM || 'stdout', collector: 'runtime-discovered' },
+          metrics: '/metrics',
+          traces: 'W3C traceparent + x-os-trace-id',
+        },
       }, ctx);
     }
     if (req.method === 'GET' && route === '/openapi.json') return json(res, 200, OPENAPI, ctx);
