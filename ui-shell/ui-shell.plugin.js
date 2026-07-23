@@ -2,7 +2,6 @@
 const TAG = 'osp-shell-template-shell';
 const PLUGIN_ID = 'shell-template';
 let injected = false;
-let hostContextInstalled = false;
 let activeContext;
 
 const SEARCH_ITEMS = [
@@ -12,10 +11,20 @@ const SEARCH_ITEMS = [
   { label: 'Shell Template Observability', sublabel: '구조화 로그·Prometheus metrics·trace correlation', path: '/p/shell-template', kind: 'result' },
 ];
 
-function injectOnce(base) {
+async function injectOnce(ctx, base) {
   if (injected) return;
   injected = true;
   window.__OSP_NG_API_BASE__ = base;
+  if (ctx.assets) {
+    try {
+      await ctx.assets.loadStyle('styles');
+      if (!customElements.get(TAG)) await ctx.assets.loadModule('app');
+      return;
+    } catch (error) {
+      injected = false;
+      throw error;
+    }
+  }
   const v = `?v=${Date.now()}`;
   const css = document.createElement('link');
   css.rel = 'stylesheet'; css.href = `${base}/app/styles.css${v}`;
@@ -24,7 +33,7 @@ function injectOnce(base) {
   const s = document.createElement('script');
   s.type = 'module'; s.src = `${base}/app/main.js${v}`;
   s.setAttribute('data-osp-plugin', PLUGIN_ID);
-  document.head.appendChild(s);
+  if (!customElements.get(TAG)) document.head.appendChild(s);
 }
 
 async function contributeManual(ctx) {
@@ -52,15 +61,8 @@ async function contributeManual(ctx) {
 
 export async function activate(ctx) {
   const base = (ctx.api?.baseUrl ?? '').replace(/\/$/, '');
-  const contexts = window.__OPENSPHERE_HOST_CONTEXTS__ ||= Object.create(null);
-  contexts[PLUGIN_ID] = {
-    api: { baseUrl: base, fetch: ctx.api?.fetch },
-    identity: ctx.identity,
-    grants: ctx.grants,
-  };
-  hostContextInstalled = true;
   activeContext = ctx;
-  injectOnce(base);
+  await injectOnce(ctx, base);
 
   ctx.extensions.registerPage?.({ id: ctx.pluginId, title: 'Shell Template', navBand: '구축 Build', elementTag: TAG });
   ctx.extensions.nav?.contribute([{
@@ -97,9 +99,7 @@ export function deactivate() {
   activeContext?.extensions.search?.clear();
   activeContext?.extensions.manual?.clear();
   activeContext?.notify?.clear();
-  if (hostContextInstalled && window.__OPENSPHERE_HOST_CONTEXTS__) delete window.__OPENSPHERE_HOST_CONTEXTS__[PLUGIN_ID];
   document.querySelectorAll(`[data-osp-plugin="${PLUGIN_ID}"]`).forEach((node) => node.remove());
   activeContext = undefined;
-  hostContextInstalled = false;
   injected = false;
 }

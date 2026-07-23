@@ -3,6 +3,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
 const { createServer, safeFile, CLI_MANIFEST } = require('../server');
@@ -12,6 +13,29 @@ test('safeFile confines requests to the selected root', () => {
   assert.equal(safeFile(root, 'main.js'), path.join(root, 'main.js'));
   assert.equal(safeFile(root, '../secret'), null);
   assert.equal(safeFile(root, '%2e%2e/secret'), null);
+  assert.equal(safeFile(root, 'main.js%00.txt'), null);
+});
+
+test('malformed Host input cannot terminate the request process', async (t) => {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const { port } = server.address();
+
+  const rawResponse = await new Promise((resolve, reject) => {
+    const socket = net.connect(port, '127.0.0.1', () => {
+      socket.end('GET /healthz HTTP/1.1\r\nHost: [\r\nConnection: close\r\n\r\n');
+    });
+    let data = '';
+    socket.setEncoding('utf8');
+    socket.on('data', (chunk) => { data += chunk; });
+    socket.on('end', () => resolve(data));
+    socket.on('error', reject);
+  });
+  assert.match(rawResponse, /^HTTP\/1\.1 200/);
+
+  const health = await fetch(`http://127.0.0.1:${port}/healthz`);
+  assert.equal(health.status, 200);
 });
 
 test('health, API, CLI, OpenAPI and observability are available without cluster privileges', async (t) => {

@@ -8,6 +8,7 @@
     "start": "ng serve",
     "serve:backend": "node server.js",
     "package:module": "node tools/package-module.mjs",
+    "verify:artifacts": "node tools/verify-artifacts.mjs",
     "test": "node --test test/*.test.js",
     "verify": "npm test && npm run build"
   },

@@ -110,6 +110,7 @@ function json(res, status, body, ctx) {
 
 function safeFile(root, relativePath) {
   const decoded = decodeURIComponent(relativePath);
+  if (decoded.includes('\0')) return null;
   const target = path.resolve(root, `.${path.sep}${decoded}`);
   const relative = path.relative(root, target);
   if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
@@ -194,9 +195,16 @@ const OPENAPI = Object.freeze({
 });
 
 function createServer() {
-  return http.createServer((req, res) => {
+  const server = http.createServer((req, res) => {
     const started = process.hrtime.bigint();
-    const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    let url;
+    try {
+      if (typeof req.url !== 'string' || req.url.includes('\0')) throw new TypeError('invalid request target');
+      // Host는 라우팅 입력이 아니다. 고정 origin으로 상대 request-target만 파싱한다.
+      url = new URL(req.url, 'http://localhost');
+    } catch {
+      return json(res, 400, { error: 'bad request target' }, requestContext(req, 'invalid'));
+    }
     const route = url.pathname;
     const routeName = normalizedRoute(route);
     const ctx = requestContext(req, routeName);
@@ -254,6 +262,10 @@ function createServer() {
     if (req.method === 'GET' && route.startsWith('/app/')) return serveFile(WWW, route.slice('/app/'.length), res, ctx);
     return json(res, 404, { error: 'not found' }, ctx);
   });
+  server.on('clientError', (_error, socket) => {
+    if (socket.writable) socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+  });
+  return server;
 }
 
 if (require.main === module) {
