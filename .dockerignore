@@ -2,6 +2,7 @@
 .gitignore
 .gitattributes
 *.md
+!ui-shell/manual/*.md
 node_modules
 dist
 .angular

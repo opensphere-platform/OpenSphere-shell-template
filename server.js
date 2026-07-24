@@ -8,7 +8,7 @@ const { randomBytes, randomUUID } = require('crypto');
 const PORT = Number(process.env.PORT || 8080);
 const PLUGINS = path.resolve(process.env.PLUGINS_DIR || '/app/plugins');
 const WWW = path.resolve(process.env.WWW_DIR || '/app/www');
-const VERSION = process.env.APP_VERSION || '0.2.1-edge.1';
+const VERSION = process.env.APP_VERSION || '0.2.2-edge.1';
 const SERVICE = 'shell-template';
 const ENVIRONMENT = process.env.OSP_ENVIRONMENT || 'development';
 const NAMESPACE = process.env.POD_NAMESPACE || readOptional('/var/run/secrets/kubernetes.io/serviceaccount/namespace') || 'opensphere-console';
@@ -168,9 +168,16 @@ function metricsText() {
 }
 
 const CONTRIBUTIONS = Object.freeze({
-  page: 'Ready', navigation: 'Ready', api: 'Ready', cli: 'Ready', manual: 'Ready',
+  page: 'Ready', navigation: 'NotApplicable', api: 'Ready', cli: 'Ready', manual: 'Ready',
   search: 'Ready', notification: 'Ready', logs: 'Ready', metrics: 'Ready', traces: 'Ready',
 });
+const CAPABILITIES = Object.freeze([
+  'page:register',
+  'api:proxy',
+  'search:contribute',
+  'manual:contribute',
+  'notify:publish',
+]);
 
 const CLI_MANIFEST = Object.freeze({
   kind: 'OpenSphereCLICommandManifest',
@@ -243,7 +250,7 @@ function createServer() {
       return json(res, 200, {
         id: SERVICE,
         standard: 'OpenSphere subShell reference template',
-        capabilities: ['page:register', 'api:proxy', 'nav:contribute', 'search:contribute', 'manual:contribute', 'notify:publish'],
+        capabilities: CAPABILITIES,
         contributions: CONTRIBUTIONS,
         observability: {
           logs: { format: 'json', schema: LOG_SCHEMA, stream: process.env.OSP_LOG_STREAM || 'stdout', collector: 'runtime-discovered' },
@@ -274,4 +281,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { createServer, safeFile, metricsText, CLI_MANIFEST, OPENAPI };
+module.exports = { createServer, safeFile, metricsText, CLI_MANIFEST, OPENAPI, CONTRIBUTIONS, CAPABILITIES };

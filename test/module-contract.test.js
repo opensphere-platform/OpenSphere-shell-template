@@ -6,12 +6,15 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const manifest = JSON.parse(fs.readFileSync(path.join(root, 'ui-shell/ui-shell.manifest.json'), 'utf8'));
+const manifest = JSON.parse(fs.readFileSync(path.join(root, 'ui-shell/ui-shell.manifest.source.json'), 'utf8'));
+const packageInfo = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const { CAPABILITIES, CONTRIBUTIONS } = require('../server');
 
 test('declares the canonical main-shell route and API surface', () => {
   assert.equal(manifest.id, 'shell-template');
   assert.equal(manifest.kind, 'subShell');
   assert.equal(manifest.hostRef, 'main');
+  assert.equal(manifest.version, packageInfo.version);
   assert.equal(manifest.apiBase, '/api/plugins/shell-template');
   assert.deepEqual(manifest.permissions, [
     'page:register', 'api:proxy', 'search:contribute',
@@ -20,7 +23,22 @@ test('declares the canonical main-shell route and API surface', () => {
   assert.equal(manifest.nav.band, '구축 Build');
 });
 
-test('implements every production integration contract', () => {
+test('keeps signed release artifacts generated and source manifest authoritative', () => {
+  assert.equal(Object.hasOwn(manifest, 'entrySha256'), false);
+  assert.equal(Object.hasOwn(manifest, 'assets'), false);
+  const packager = fs.readFileSync(path.join(root, 'tools', 'package-module.mjs'), 'utf8');
+  const ignored = fs.readFileSync(path.join(root, '.gitignore'), 'utf8');
+  assert.match(packager, /ui-shell\.manifest\.source\.json/);
+  assert.match(packager, /source manifest must not contain generated entrySha256 or assets/);
+  for (const artifact of [
+    '/module-package.json',
+    '/module-package.json.sig',
+    '/ui-shell/ui-shell.manifest.json',
+    '/ui-shell/ui-shell.manifest.json.sig',
+  ]) assert.match(ignored, new RegExp(artifact.replaceAll('.', '\\.')));
+});
+
+test('declares every integration and implements the selected reference profile', () => {
   assert.equal(manifest.contributions.page.enabled, true);
   assert.equal(manifest.contributions.api.enabled, true);
   assert.equal(manifest.contributions.navigation.enabled, false);
@@ -38,6 +56,20 @@ test('implements every production integration contract', () => {
     [manifest.contributions.observability.logs, manifest.contributions.observability.metrics, manifest.contributions.observability.traces],
     [true, true, true],
   );
+  assert.deepEqual(CAPABILITIES, manifest.permissions);
+  assert.equal(CONTRIBUTIONS.navigation, 'NotApplicable');
+});
+
+test('keeps the release version aligned across source and runtime defaults', () => {
+  const packageLock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+  const dockerfile = fs.readFileSync(path.join(root, 'Dockerfile'), 'utf8');
+  const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+  const escaped = packageInfo.version.replaceAll('.', '\\.');
+  assert.equal(packageLock.version, packageInfo.version);
+  assert.equal(packageLock.packages[''].version, packageInfo.version);
+  assert.equal(manifest.version, packageInfo.version);
+  assert.match(dockerfile, new RegExp(`ARG APP_VERSION=${escaped}`));
+  assert.match(server, new RegExp(`APP_VERSION \\|\\| '${escaped}'`));
 });
 
 test('contains no legacy cluster privilege artifacts', () => {
@@ -52,7 +84,11 @@ test('ships the runtime manual and all host contribution implementations', () =>
   const app = fs.readFileSync(path.join(root, 'src', 'app', 'app.component.ts'), 'utf8');
   const manual = fs.readFileSync(path.join(root, 'ui-shell', 'manual', 'shell-template.ko.md'), 'utf8');
   assert.doesNotMatch(entry, /extensions\.nav/);
+  assert.doesNotMatch(entry, /__OSP_NG_API_BASE__/);
+  assert.match(entry, /ctx\.routing\?\.basePath/);
+  assert.doesNotMatch(entry, /path: '\/p\/shell-template/);
   assert.match(app, /<clr-vertical-nav/);
+  assert.match(app, /this\.routing\.navigate/);
   assert.match(entry, /extensions\.search\?\.contribute/);
   assert.match(entry, /extensions\.manual\.contribute/);
   assert.match(entry, /notify\?\.publish/);

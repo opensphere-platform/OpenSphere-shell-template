@@ -7,6 +7,7 @@ import { IconsPageComponent } from './icons.component';
 import { TypographyPageComponent } from './typography.component';
 import { DataGridPageComponent } from './datagrid.component';
 import { DataGrid2PageComponent } from './datagrid2.component';
+import { SHELL_ID, shellHostContext } from './host-context';
 import Home16 from '@carbon/icons/es/home/16';
 import Code16 from '@carbon/icons/es/code/16';
 import Kubernetes16 from '@carbon/icons/es/kubernetes/16';
@@ -20,17 +21,11 @@ interface Group { id: string; label: string; icon: any; children: Leaf[] }
 // SDK 표준 subShell — Shell Template(컨테이너 섹션 데모). ShadowDom 자체완결.
 // 2단 = OpenSphere AI Hub 표준(Clarity clr-vertical-nav, 흰 배경, 왼쪽 blue bar). 섹션 진입 = overview(규약).
 //
-// ─── URL 상태 표준(모든 subShell 공통 — 이 스켈레톤이 원본) ───
-// subShell은 콘솔 Angular Router의 자식 라우트를 갖지 않는다(콘솔은 `/p/:id`만 소유, §plugin-host.ts).
-// 그래서 탭/뷰 상태는 **`/p/<id>/서브패스` 경로 세그먼트 + pushState/popstate**로 URL에 반영한다
-// (OpenSphere-shell-ai가 원조 — 여기서부터 이 스켈레톤을 복제하는 모든 subShell로 표준을 전파한다).
-// 콘솔의 `pluginHostMatcher`(app.routes.ts)가 `/p/<id>` 아래 임의 서브패스를 전부 PluginHost(id)로
-// 위임하므로, 서브패스가 바뀌어도 `id`가 그대로면 재마운트되지 않는다.
-//   · pushState 자체는 popstate를 발화시키지 않는다(스펙상 실제 traversal에서만 발생) — 이전에 있던
-//     "쿼리+replaceState만" 컨벤션은 이 우려에 대한 근거 없는 과잉 안전장치였다(폐기).
-//   · 브라우저 뒤로/앞으로 가기는 `popstate` 리스너로 지원한다.
-//   · 최초 로드(북마크·새로고침)에서는 `tabFromRoute()`로 URL을 1회 읽어 초기 상태를 복원한다.
-//   · 이후 모든 상태 변경은 `select()`/`syncUrl()` 한 곳을 거친다 — 산발적으로 URL을 건드리지 않는다.
+// ─── URL 상태 표준(모든 subShell 공통) ───
+// Main Shell은 `/p/<id>`와 browser history를 소유하고, subShell은 그 아래 서브패스 의미만 소유한다.
+// 설치 상태에서는 ctx.routing의 basePath/navigate/subscribe만 사용한다. 직접 history를 다루는 코드는
+// Host 없이 실행하는 standalone 개발 fallback에 한정한다. deep-link·새로고침·뒤로/앞으로는 모두
+// 같은 tabFromRoute() 경로를 통과하므로 동일 view를 복원한다.
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -151,18 +146,27 @@ export class AppComponent implements OnDestroy {
     ] },
   ];
 
-  readonly active = signal<string>(this.tabFromRoute());
+  private readonly host = shellHostContext();
+  private readonly routing = this.host?.routing;
+  private readonly basePath = this.routing?.basePath ?? `/p/${SHELL_ID}`;
+  readonly active = signal<string>(this.tabFromRoute(this.routing?.currentPath()));
   private readonly open = signal<Record<string, boolean>>({ serverless: true, clusters: true, 'design-system': true });
   private readonly onPopState = () => this.select(this.tabFromRoute(), false);
+  private readonly unsubscribeRoute?: () => void;
   isOpen(id: string): boolean { return !!this.open()[id]; }
   setOpen(id: string, v: boolean): void { this.open.update((m) => ({ ...m, [id]: v })); }
 
   constructor() {
-    window.addEventListener('popstate', this.onPopState);
+    if (this.routing) {
+      this.unsubscribeRoute = this.routing.subscribe((path) => this.select(this.tabFromRoute(path), false));
+    } else {
+      window.addEventListener('popstate', this.onPopState);
+    }
   }
 
   ngOnDestroy(): void {
-    window.removeEventListener('popstate', this.onPopState);
+    this.unsubscribeRoute?.();
+    if (!this.routing) window.removeEventListener('popstate', this.onPopState);
   }
 
   /** updateUrl=false는 popstate(이미 URL이 바뀐 뒤)에 대한 반응일 때만 쓴다 — pushState 중복 방지. */
@@ -183,19 +187,34 @@ export class AppComponent implements OnDestroy {
     return ids;
   }
 
-  /** 'shell-template' 세그먼트 뒤(서브패스) → 탭 id. 모르는/빈 값은 overview로 폴백. */
-  private tabFromRoute(): string {
-    const parts = window.location.pathname.split('/').filter(Boolean);
-    const idx = parts.indexOf('shell-template');
-    const t = idx >= 0 ? (parts[idx + 1] ?? '') : '';
+  /** Host basePath 뒤 첫 세그먼트 → 탭 id. 모르는/빈 값은 overview로 폴백. */
+  private tabFromRoute(rawPath?: string): string {
+    const current = new URL(
+      rawPath ?? `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      window.location.origin,
+    );
+    const base = new URL(this.basePath, window.location.origin).pathname.replace(/\/+$/, '');
+    const suffix = current.pathname === base
+      ? ''
+      : current.pathname.startsWith(`${base}/`) ? current.pathname.slice(base.length + 1) : '';
+    const t = suffix.split('/')[0] ?? '';
     return this.validTabIds().has(t) ? t : 'overview';
   }
 
-  /** 경로 세그먼트로 pushState 갱신 — 콘솔 pluginHostMatcher가 서브패스를 전부 위임하므로 재마운트 없음. */
+  /** 설치 상태에서는 Host routing seam, standalone 개발에서만 history fallback을 사용한다. */
   private syncUrl(id: string): void {
-    const nextUrl = id === 'overview' ? '/p/shell-template' : `/p/shell-template/${id}`;
-    if (window.location.pathname === nextUrl) return;
-    history.pushState(null, '', nextUrl + window.location.search + window.location.hash);
+    const nextPath = id === 'overview' ? this.basePath : `${this.basePath}/${id}`;
+    const current = new URL(
+      this.routing?.currentPath() ?? `${window.location.pathname}${window.location.search}${window.location.hash}`,
+      window.location.origin,
+    );
+    const nextUrl = `${nextPath}${current.search}${current.hash}`;
+    if (`${current.pathname}${current.search}${current.hash}` === nextUrl) return;
+    if (this.routing) {
+      this.routing.navigate(nextUrl);
+    } else {
+      history.pushState(null, '', nextUrl);
+    }
   }
 
   private label(id: string): string {

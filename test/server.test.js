@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const net = require('node:net');
 const os = require('node:os');
 const path = require('node:path');
-const { createServer, safeFile, CLI_MANIFEST } = require('../server');
+const { createServer, safeFile, CLI_MANIFEST, CONTRIBUTIONS, CAPABILITIES } = require('../server');
 
 test('safeFile confines requests to the selected root', () => {
   const root = path.resolve('C:/opensphere-test-root');
@@ -58,7 +58,7 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   assert.deepEqual(await info.json(), {
     id: 'shell-template',
     kind: 'subShell',
-    version: '0.2.1-edge.1',
+    version: '0.2.2-edge.1',
     hostRef: 'main',
     permissionProfile: 'none',
   });
@@ -72,6 +72,13 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   const statusBody = await status.json();
   assert.equal(statusBody.ready, true);
   assert.equal(statusBody.integrations.logs, 'Ready');
+  assert.equal(statusBody.integrations.navigation, 'NotApplicable');
+  assert.deepEqual(statusBody.integrations, CONTRIBUTIONS);
+
+  const contract = await fetch(`http://127.0.0.1:${port}/api/contract`);
+  const contractBody = await contract.json();
+  assert.deepEqual(contractBody.capabilities, CAPABILITIES);
+  assert.equal(contractBody.capabilities.includes('nav:contribute'), false);
 
   const cli = await fetch(`http://127.0.0.1:${port}/cli/manifest`);
   assert.equal(cli.status, 200);
@@ -83,7 +90,7 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   const metrics = await fetch(`http://127.0.0.1:${port}/metrics`);
   const exposition = await metrics.text();
   assert.match(exposition, /opensphere_subshell_http_requests_total/);
-  assert.match(exposition, /opensphere_subshell_ready\{service="shell-template",version="0\.2\.1-edge\.1"\} 1/);
+  assert.match(exposition, /opensphere_subshell_ready\{service="shell-template",version="0\.2\.2-edge\.1"\} 1/);
 });
 
 test('emits collector-ready OpenSphere v1 JSON without leaking bearer credentials', async (t) => {

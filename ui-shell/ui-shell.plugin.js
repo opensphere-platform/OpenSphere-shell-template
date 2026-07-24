@@ -4,17 +4,18 @@ const PLUGIN_ID = 'shell-template';
 let injected = false;
 let activeContext;
 
-const SEARCH_ITEMS = [
-  { label: 'Shell Template', sublabel: '표준 subShell 개요', path: '/p/shell-template', kind: 'page' },
-  { label: 'Shell Template CLI', sublabel: 'os template status · contract', path: '/p/shell-template/sl-cli', kind: 'result' },
-  { label: 'Shell Template Manual', sublabel: '표준 subShell 구현 및 운영 안내서', path: '/manual', kind: 'result' },
-  { label: 'Shell Template Observability', sublabel: '구조화 로그·Prometheus metrics·trace correlation', path: '/p/shell-template', kind: 'result' },
-];
+function searchItems(basePath) {
+  return [
+    { label: 'Shell Template', sublabel: '표준 subShell 개요', path: basePath, kind: 'page' },
+    { label: 'Shell Template CLI', sublabel: 'os template status · contract', path: `${basePath}/sl-cli`, kind: 'result' },
+    { label: 'Shell Template Manual', sublabel: '표준 subShell 구현 및 운영 안내서', path: '/manual', kind: 'result' },
+    { label: 'Shell Template Observability', sublabel: '구조화 로그·Prometheus metrics·trace correlation', path: basePath, kind: 'result' },
+  ];
+}
 
 async function injectOnce(ctx, base) {
   if (injected) return;
   injected = true;
-  window.__OSP_NG_API_BASE__ = base;
   if (ctx.assets) {
     try {
       await ctx.assets.loadStyle('styles');
@@ -36,7 +37,7 @@ async function injectOnce(ctx, base) {
   if (!customElements.get(TAG)) document.head.appendChild(s);
 }
 
-async function contributeManual(ctx) {
+async function contributeManual(ctx, basePath) {
   if (!ctx.extensions.manual || !ctx.api?.fetch) throw new Error('Manual contribution contract is unavailable');
   const response = await ctx.api.fetch('plugins/manual/shell-template.ko.md', { cache: 'no-store' });
   if (!response.ok) throw new Error(`Shell Template Manual HTTP ${response.status}`);
@@ -51,7 +52,7 @@ async function contributeManual(ctx) {
       id: 'shell-template-standard-ko',
       title: 'OpenSphere 표준 subShell 템플릿 구현 및 운영 안내서',
       content,
-      route: '/p/shell-template',
+      route: basePath,
       sourcePath: 'ui-shell/manual/shell-template.ko.md',
       documentType: 'reference',
       tags: ['subshell', 'template', 'sdk', 'cli', 'manual', 'search', 'notification', 'observability', 'logs'],
@@ -61,25 +62,42 @@ async function contributeManual(ctx) {
 
 export async function activate(ctx) {
   const base = (ctx.api?.baseUrl ?? '').replace(/\/$/, '');
+  const routeBase = ctx.routing?.basePath ?? `/p/${ctx.pluginId}`;
+  const contexts = window.__OPENSPHERE_HOST_CONTEXTS__ ||= Object.create(null);
+  contexts[PLUGIN_ID] = {
+    pluginId: ctx.pluginId,
+    grants: [...(ctx.grants ?? [])],
+    routing: ctx.routing,
+    api: ctx.api ? { baseUrl: base, fetch: (input, init) => ctx.api.fetch(input, init) } : undefined,
+    identity: ctx.identity,
+    host: ctx.host,
+  };
   activeContext = ctx;
-  await injectOnce(ctx, base);
+  try {
+    await injectOnce(ctx, base);
+  } catch (error) {
+    delete contexts[PLUGIN_ID];
+    activeContext = undefined;
+    throw error;
+  }
 
   ctx.extensions.registerPage?.({ id: ctx.pluginId, title: 'Shell Template', navBand: '구축 Build', elementTag: TAG });
+  const items = searchItems(routeBase);
   ctx.extensions.search?.contribute({
     query: (raw) => {
       const q = String(raw || '').trim().toLocaleLowerCase();
       if (!q) return [];
-      return SEARCH_ITEMS.filter((item) => `${item.label} ${item.sublabel}`.toLocaleLowerCase().includes(q));
+      return items.filter((item) => `${item.label} ${item.sublabel}`.toLocaleLowerCase().includes(q));
     },
   });
-  await contributeManual(ctx);
+  await contributeManual(ctx, routeBase);
   ctx.notify?.publish({
     title: 'Shell Template 통합 준비 완료',
     severity: 'success',
     persistent: true,
     category: 'plugin-lifecycle',
     detail: 'Page·API·CLI·Manual·Search·Notification·Observability 표준 계약이 활성화되었습니다.',
-    route: '/p/shell-template',
+    route: routeBase,
     topic: 'shell-template',
     dedupKey: 'shell-template-ready',
   });
@@ -90,6 +108,7 @@ export function deactivate() {
   activeContext?.extensions.manual?.clear();
   activeContext?.notify?.clear();
   document.querySelectorAll(`[data-osp-plugin="${PLUGIN_ID}"]`).forEach((node) => node.remove());
+  if (window.__OPENSPHERE_HOST_CONTEXTS__) delete window.__OPENSPHERE_HOST_CONTEXTS__[PLUGIN_ID];
   activeContext = undefined;
   injected = false;
 }

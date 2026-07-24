@@ -5,6 +5,8 @@ on:
   push:
     branches: [main]
     paths:
+      - .dockerignore
+      - .gitattributes
       - Dockerfile
       - server.js
       - package.json
@@ -15,8 +17,6 @@ on:
       - tools/**
       - vendor/**
       - ui-shell/**
-      - module-package.json
-      - module-package.json.sig
       - .github/scripts/**
       - .github/workflows/publish-image.yml
 
@@ -115,6 +115,7 @@ jobs:
           build-args: |
             ${{ steps.package.outputs.descriptor-build-arg }}
             OS_MODULE_SIGNATURE=${{ steps.package.outputs.signature }}
+            APP_VERSION=${{ steps.package.outputs.version }}
           provenance: mode=max
           cache-from: type=gha,scope=opensphere-shell-template
           cache-to: type=gha,mode=max,scope=opensphere-shell-template
