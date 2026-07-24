@@ -31,7 +31,7 @@ ServiceMonitor와 Registry registration을 생성합니다.
 
 - Page: `/p/shell-template`
 - API: `/api/plugins/shell-template`
-- Navigation: Main Shell의 `구축 Build` band에 런타임 기여
+- Navigation: Main Shell의 `구축 Build` band에는 단일 page entry만 등록하고, 도메인 navigation tree는 subShell 내부 2단에서 소유
 - CLI: `os template status`, `os template contract`
 - Manual: 한글 문서를 Main Shell Manual에 등록
 - Search: 통합 검색 provider 등록

@@ -9,13 +9,12 @@
   "title": "Shell Template",
   "description": "OpenSphere Shell Template subShell.",
   "entry": "ui-shell.plugin.js",
-  "entrySha256": "a4c08789ed5b2a77639a954bb5353195ea8ffa8f363305f92094f990a70ff10d",
+  "entrySha256": "4aeabd8f084d5f304296a529ea7881b6acb668b4f4eb75f3df64cb0cdcc3b2b3",
   "shellCompat": ">=0.2.0 <0.9.0",
   "sdkVersion": "0.3.1",
   "permissions": [
     "page:register",
     "api:proxy",
-    "nav:contribute",
     "search:contribute",
     "manual:contribute",
     "notify:publish"
@@ -32,8 +31,9 @@
       "enabled": true
     },
     "navigation": {
-      "enabled": true,
-      "mode": "runtime"
+      "enabled": false,
+      "mode": "none",
+      "reason": "Main Shell exposes one flat page entry; Shell Template owns its domain navigation tree inside the subShell page"
     },
     "api": {
       "enabled": true,
@@ -65,5 +65,19 @@
       "metrics": true,
       "traces": true
     }
-  }
+  },
+  "assets": [
+    {
+      "id": "app",
+      "path": "../app/main.js",
+      "type": "module",
+      "sha256": "81d05337b1e1faf7504ca15e231e18b34551e96c0b7efc59039a50a3dee3d9f3"
+    },
+    {
+      "id": "styles",
+      "path": "../app/styles.css",
+      "type": "style",
+      "sha256": "c0871a84b21f528f140bf30a0aa251df24eb2ec76f65b42d334f079099700a52"
+    }
+  ]
 }

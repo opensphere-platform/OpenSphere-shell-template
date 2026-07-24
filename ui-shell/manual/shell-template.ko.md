@@ -6,7 +6,7 @@
 
 - Page: `/p/<module-id>`와 안정적인 deep link를 등록합니다.
 - API: `/api/plugins/<module-id>` 동일 출처 프록시만 사용합니다.
-- Navigation: Main Shell이 집계하는 메뉴 트리를 기여합니다.
+- Navigation: Main Shell에는 단일 page entry만 등록하고, 도메인 메뉴 트리는 subShell 내부 2단에서 소유합니다.
 - CLI: `os <namespace> <command>`가 동적으로 발견할 명령 manifest를 제공합니다.
 - Manual: 설치된 모듈의 한국어 문서를 OpenSphere Manual에 등록합니다.
 - Search: 페이지·CLI·문서를 통합검색에서 찾을 수 있게 합니다.

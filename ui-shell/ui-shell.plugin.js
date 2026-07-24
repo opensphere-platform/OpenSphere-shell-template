@@ -65,15 +65,6 @@ export async function activate(ctx) {
   await injectOnce(ctx, base);
 
   ctx.extensions.registerPage?.({ id: ctx.pluginId, title: 'Shell Template', navBand: '구축 Build', elementTag: TAG });
-  ctx.extensions.nav?.contribute([{
-    id: 'shell-template',
-    label: 'Shell Template',
-    children: [
-      { id: 'shell-template-overview', label: 'Overview', route: '/p/shell-template' },
-      { id: 'shell-template-cli', label: 'CLI', route: '/p/shell-template/sl-cli' },
-      { id: 'shell-template-docs', label: 'Documentation', route: '/manual' },
-    ],
-  }]);
   ctx.extensions.search?.contribute({
     query: (raw) => {
       const q = String(raw || '').trim().toLocaleLowerCase();
@@ -95,7 +86,6 @@ export async function activate(ctx) {
 }
 
 export function deactivate() {
-  activeContext?.extensions.nav?.clear();
   activeContext?.extensions.search?.clear();
   activeContext?.extensions.manual?.clear();
   activeContext?.notify?.clear();
