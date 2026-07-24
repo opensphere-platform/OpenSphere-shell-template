@@ -5,7 +5,7 @@
   "hostRef": "main",
   "hostApiVersion": "1.0.0",
   "hostCompat": ">=1.0.0 <2.0.0",
-  "version": "0.2.2-edge.1",
+  "version": "0.2.2-edge.2",
   "title": "Shell Template",
   "description": "OpenSphere Shell Template subShell.",
   "entry": "ui-shell.plugin.js",

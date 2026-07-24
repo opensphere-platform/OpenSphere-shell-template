@@ -2,7 +2,7 @@
 # OpenSphere subShell: shell-template — signed OCI reference implementation.
 ARG OS_MODULE_DESCRIPTOR
 ARG OS_MODULE_SIGNATURE
-ARG APP_VERSION=0.2.2-edge.1
+ARG APP_VERSION=0.2.2-edge.2
 ARG BUILDPLATFORM
 FROM --platform=$BUILDPLATFORM docker.io/library/node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2 AS build
 WORKDIR /app
@@ -31,6 +31,8 @@ COPY --chmod=0644 ui-shell/ui-shell.manifest.json /app/plugins/ui-shell.manifest
 COPY --chmod=0644 ui-shell/ui-shell.manifest.json.sig /app/plugins/ui-shell.manifest.json.sig
 COPY --chmod=0644 ui-shell/manual/ /app/plugins/manual/
 COPY --from=build /app/dist/shell-template/browser /app/www
+RUN find /app/plugins -type d -exec chmod 0755 {} + \
+    && find /app/plugins -type f -exec chmod 0644 {} +
 ENV PLUGINS_DIR=/app/plugins WWW_DIR=/app/www PORT=8080 \
     APP_VERSION=$APP_VERSION
 EXPOSE 8080

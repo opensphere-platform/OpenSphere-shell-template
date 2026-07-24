@@ -60,4 +60,6 @@ test('ships the runtime Manual through the Docker build context', () => {
   assert.match(manual, /Log 통합/);
   assert.match(dockerignore, /!ui-shell\/manual\/\*\.md/);
   assert.match(dockerfile, /COPY --chmod=0644 ui-shell\/manual\//);
+  assert.match(dockerfile, /find \/app\/plugins -type d -exec chmod 0755/);
+  assert.match(dockerfile, /find \/app\/plugins -type f -exec chmod 0644/);
 });
