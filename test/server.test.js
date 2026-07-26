@@ -58,7 +58,7 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   assert.deepEqual(await info.json(), {
     id: 'shell-template',
     kind: 'subShell',
-    version: '0.2.2-edge.2',
+    version: '0.2.2',
     hostRef: 'main',
     permissionProfile: 'none',
   });
@@ -90,7 +90,7 @@ test('health, API, CLI, OpenAPI and observability are available without cluster 
   const metrics = await fetch(`http://127.0.0.1:${port}/metrics`);
   const exposition = await metrics.text();
   assert.match(exposition, /opensphere_subshell_http_requests_total/);
-  assert.match(exposition, /opensphere_subshell_ready\{service="shell-template",version="0\.2\.2-edge\.2"\} 1/);
+  assert.match(exposition, /opensphere_subshell_ready\{service="shell-template",version="0\.2\.2"\} 1/);
 });
 
 test('emits collector-ready OpenSphere v1 JSON without leaking bearer credentials', async (t) => {

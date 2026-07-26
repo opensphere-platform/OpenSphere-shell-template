@@ -3,6 +3,7 @@ set -euo pipefail
 
 image="${1:?image reference is required}"
 expected_version="${2:?expected module version is required}"
+expected_release_tag="${3:?expected official release tag is required}"
 manifest=""
 
 for attempt in {1..12}; do
@@ -23,10 +24,18 @@ while IFS= read -r platform_digest; do
   signature="$(jq -er '.config.Labels["io.opensphere.module.descriptor.signature"]' <<<"$config")"
   key_id="$(jq -er '.config.Labels["io.opensphere.module.descriptor.key-id"]' <<<"$config")"
   version="$(jq -er '.config.Labels["org.opencontainers.image.version"]' <<<"$config")"
+  release_tag="$(jq -er '.config.Labels["io.opensphere.release-tag"]' <<<"$config")"
+  compatibility_version="$(jq -er '.config.Labels["io.opensphere.compatibility-version"]' <<<"$config")"
+  channel="$(jq -er '.config.Labels["io.opensphere.channel"]' <<<"$config")"
+  build_authority="$(jq -er '.config.Labels["opensphere.io/build-authority"]' <<<"$config")"
   source="$(jq -er '.config.Labels["org.opencontainers.image.source"]' <<<"$config")"
   revision="$(jq -er '.config.Labels["org.opencontainers.image.revision"]' <<<"$config")"
   jq -e --arg version "$expected_version" '.version == $version and .permissionProfile == "none"' <<<"$descriptor" >/dev/null
-  test "$version" = "$expected_version"
+  test "$version" = "$expected_release_tag"
+  test "$release_tag" = "$expected_release_tag"
+  test "$compatibility_version" = "$expected_version"
+  test "$channel" = "ga"
+  test "$build_authority" = "github-actions"
   test "$key_id" = "opensphere-plugins-v5"
   test "$source" = "https://github.com/opensphere-platform/OpenSphere-shell-template"
   test "${#revision}" = 40
