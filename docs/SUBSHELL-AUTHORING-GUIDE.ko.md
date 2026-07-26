@@ -5,8 +5,9 @@
 이 문서는 `OpenSphere-shell-template`의 코드만 보고도 새 subShell의 경계, 필수 기능, 파일 구성,
 Host 연결, 보안과 출시 절차를 이해할 수 있도록 만든 구현 가이드다.
 
-플랫폼 전체 규범의 최종 권위는
-`CONSTITUTION-0003-SHELL-HOSTING-INTEGRATION`이다. 이 저장소는 현재 Main Shell Host API와
+Shell/Host 규범의 최종 권위는 `CONSTITUTION-0003-SHELL-HOSTING-INTEGRATION`이고 빌드·공식
+버전·channel·GHCR 게시·배포의 최종 권위는 `CONSTITUTION-0005`다. Edge와 GA의 실제 실행은
+`RUNBOOK-0005-EDGE-GA-BUILD-PUBLISH-DEPLOY`를 따른다. 이 저장소는 현재 Main Shell Host API와
 ModulePackage v1을 사용하는 **실행 가능한 reference profile**이며, 규범을 대체하는 별도 아키텍처가
 아니다. 충돌을 발견하면 문서만 고치지 말고 source manifest, 구현과 테스트를 같은 변경으로 정렬한다.
 
@@ -405,14 +406,20 @@ npm test
 npm run build
 ```
 
-### release
+### Edge release
 
-승인된 P-256 key와 SDK build가 있는 환경에서:
+Edge는 Windows `docker-desktop`, `linux/amd64`, GHCR canonical repository, KST official version,
+exact digest 설치를 한 단위로 수행한다. Docker Desktop 전용 edge-local P-256 key를 사용하며 GA
+승인키가 로컬에 없다는 이유로 중단하지 않는다.
 
 ```powershell
-npm run build
-npm run package:module
-npm run verify:artifacts
+$workspace = 'D:\@PROJECT\OpenSphere\OpenSphere-Platform-V2'
+& (Join-Path $workspace 'tools\release\Publish-LocalEdgeModule.ps1') `
+  -ModulePath '<새-subShell-repository-path>' `
+  -Repository 'ghcr.io/opensphere-platform/<canonical-image>' `
+  -SigningKey (Join-Path $env:USERPROFILE '.opensphere\keys\edge-local-v1-p256.pem') `
+  -SigningKeyId 'opensphere-edge-local-v1' `
+  -InstallReason '<변경 사유>'
 ```
 
 `package-module.mjs`는:
@@ -424,21 +431,47 @@ npm run verify:artifacts
 5. SDK schema로 descriptor를 검증한다.
 6. descriptor를 서명한다.
 
-CI는 test 후 amd64/arm64 image를 push하고 signed label, provenance, SBOM을 검증한 뒤에만 immutable
-시간 tag와 `edge` channel을 같은 digest로 이동한다.
+publisher는 artifact 검증이 끝난 뒤 `linux/amd64` image를 push하고 KST immutable tag와 `edge`를
+같은 digest로 이동한 다음 `cli:os` install/activate와 Console projection을 확인한다.
+
+### GA release
+
+GA는 repository의 승인된 GitHub Actions workflow가 clean checkout에서 GA P-256 key로 다시
+패키징한다. `linux/amd64,linux/arm64`, provenance, SPDX SBOM, vulnerability/license gate와 승인
+증거가 모두 준비된 뒤 KST immutable tag와 `ga`를 이동한다. edge-local key나 Edge digest를
+재사용하지 않는다.
+
+Shell Template reference workflow:
+
+```powershell
+gh workflow run publish-image.yml `
+  --repo opensphere-platform/OpenSphere-shell-template `
+  --ref main
+$runId = '<run-id-from-run-list>'
+gh run watch $runId `
+  --repo opensphere-platform/OpenSphere-shell-template `
+  --exit-status
+```
+
+새 subShell은 같은 GA 계약의 workflow와 canonical repository를 가져야 한다. 세부 secret 경계,
+GHCR·attestation 검증과 완료 보고 형식은 workspace의 `RUNBOOK-0005` §6–§8을 따른다.
 
 ## 15. install, update, rollback
 
 ```powershell
-os extensions inspect ghcr.io/<owner>/<image>:edge
-os extensions install ghcr.io/<owner>/<image>:edge --reason "<승인 사유>"
-os extensions activate <id>
+$image = 'ghcr.io/opensphere-platform/<canonical-image>'
+$digest = 'sha256:<digest-from-publisher>'
+$moduleId = '<module-id>'
+os extensions inspect "${image}@${digest}"
+os extensions install "${image}:edge" --reason "<승인 사유>"
+os extensions activate $moduleId
 os extensions list -o json
 ```
 
 `install`은 channel을 현재 immutable digest로 resolve해 기록하므로 기존 설치의 update 경로로도
-사용한다. 운영에서는 digest, source revision, signature identity, provenance/SBOM evidence,
-requested channel과 reason을 확인한다.
+사용한다. 먼저 exact digest를 inspect하고, 운영에서는 digest, official/compatibility version,
+source revision, build authority, signature identity, provenance/SBOM evidence, requested channel과
+reason을 확인한다. 실제 Chrome에서 메뉴·route·화면까지 확인하지 않으면 배포 완료가 아니다.
 
 rollback은 Registry가 기록한 previous digest와 evidence를 사용한다. mutable tag를 과거 상태의
 증거로 사용하지 않는다.

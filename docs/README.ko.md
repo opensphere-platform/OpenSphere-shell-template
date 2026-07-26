@@ -16,6 +16,10 @@
    - Main Shell 1단에는 단일 평면 entry만 두고 도메인 tree는 subShell 내부 2단이 소유한다는
      되돌리면 안 되는 결정을 기록한다.
 
+빌드·공식 버전·channel·GHCR 게시·배포는 workspace 최상위 `CONSTITUTION-0005`와 그 실행 부속서
+`RUNBOOK-0005-EDGE-GA-BUILD-PUBLISH-DEPLOY`를 먼저 읽는다. 특히 Edge의 host-local key와 GA
+승인키를 공유하지 않으며, GA 승인키 부재를 Edge 중단 사유로 삼지 않는다.
+
 ## 코드가 증명하는 계약
 
 - `ui-shell/ui-shell.manifest.source.json`: 사람이 편집하는 설치·권한·통합 계약

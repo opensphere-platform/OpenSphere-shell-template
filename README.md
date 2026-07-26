@@ -4,8 +4,10 @@ OpenSphere Main Shell에 연결되는 표준 subShell의 **실행 가능한 참�
 subShell의 정의, 책임 경계, frontend/backend 구성, Host integration, 보안, 서명 패키징과 운영
 lifecycle을 확인할 수 있습니다.
 
-플랫폼 규범의 최종 권위는 `CONSTITUTION-0003-SHELL-HOSTING-INTEGRATION`이며, 이 저장소는
-현재 Host API에 적용한 self-contained reference profile입니다.
+Shell/Host 계약의 최종 권위는 `CONSTITUTION-0003-SHELL-HOSTING-INTEGRATION`이고, 빌드·공식
+버전·channel·GHCR 게시·배포의 최종 권위는 workspace의 `CONSTITUTION-0005`다. 실제 명령과
+완료 판정은 `RUNBOOK-0005-EDGE-GA-BUILD-PUBLISH-DEPLOY`를 따른다. 이 저장소는 현재 Host API에
+적용한 self-contained reference profile이며 release 규칙을 별도로 재정의하지 않는다.
 
 ## 가장 먼저 읽을 문서
 
@@ -38,7 +40,7 @@ lifecycle을 확인할 수 있습니다.
 | Domain navigation | subShell 내부 2단 tree |
 | Permission profile | `none` |
 | OCI image | `ghcr.io/opensphere-platform/opensphere-shell-template` |
-| Channel | `edge` → `candidate` → `stable` |
+| Channel | 개발 `edge` / 공식 `ga` (`candidate`, `stable`은 별도 검증 채널) |
 | Runtime | non-root Node.js, port `8080` |
 | Health / readiness | `/healthz`, `/readyz` |
 | Metrics | `/metrics` |
@@ -70,7 +72,7 @@ write audit와 degraded 상태를 추가해야 합니다. 이 템플릿의 read-
 ui-shell/ui-shell.manifest.source.json
 ```
 
-승인 키가 있는 release pipeline이 생성하며 Git에 커밋하지 않는 파일:
+Edge 또는 GA의 해당 trust 경계에서 release pipeline이 생성하며 Git에 커밋하지 않는 파일:
 
 ```text
 ui-shell/ui-shell.manifest.json
@@ -89,27 +91,55 @@ npm test
 npm run build
 ```
 
-서명 산출물 검증은 승인된 P-256 key와 OpenSphere SDK build가 있는 release 환경에서 실행합니다.
+로컬 단위 검증은 서명키 없이 끝낸다. 서명 산출물은 Edge와 GA의 서로 다른 trust 경계에서
+release 절차가 생성한다.
+
+Edge 전체 게시·설치 명령:
 
 ```powershell
-$env:DUPA_SIGNING_KEY = "<approved-p256-key-path>"
-$env:DUPA_SIGNING_KEY_ID = "opensphere-plugins-v5"
-$env:OPENSPHERE_SDK = "<OpenSphere-SDK-path>"
-npm run package:module
-npm run verify:artifacts
+$workspace = 'D:\@PROJECT\OpenSphere\OpenSphere-Platform-V2'
+& (Join-Path $workspace 'tools\release\Publish-LocalEdgeModule.ps1') `
+  -ModulePath (Join-Path $workspace 'OpenSphere-shell-template') `
+  -Repository 'ghcr.io/opensphere-platform/opensphere-shell-template' `
+  -SigningKey (Join-Path $env:USERPROFILE '.opensphere\keys\edge-local-v1-p256.pem') `
+  -SigningKeyId 'opensphere-edge-local-v1' `
+  -InstallReason 'Shell Template 로컬 edge 빌드·게시·설치'
 ```
 
 ## 게시와 설치
 
-`main` push는 테스트, production build, descriptor 재생성·서명, multi-arch image, provenance와 SBOM
-gate를 통과한 뒤 immutable 시간 tag와 `edge`를 같은 digest로 이동합니다.
+Edge는 Windows Docker Desktop에서 `linux/amd64`만 로컬 build하고, KST `yyyyMMddHHmm` immutable
+tag와 `edge`를 같은 GHCR digest로 게시한 뒤 `cli:os`로 설치·활성화한다. 위 스크립트가 build,
+edge-local 서명, artifact 검증, push, tag 검증, install과 activate를 한 transaction으로 수행한다.
+GA 승인키가 로컬에 없다는 것은 Edge 중단 사유가 아니다. 단, edge-local 키 결과는 GA로 승격할
+수 없다.
 
 ```powershell
-os extensions inspect ghcr.io/opensphere-platform/opensphere-shell-template:edge
-os extensions install ghcr.io/opensphere-platform/opensphere-shell-template:edge `
-  --reason "표준 subShell Template 검증 설치 또는 업데이트"
-os extensions activate shell-template
+$digest = 'sha256:<digest-from-publisher>'
+os extensions inspect "ghcr.io/opensphere-platform/opensphere-shell-template@${digest}"
 os extensions list -o json
 ```
 
 `edge`는 선택 포인터이고 실제 workload와 audit에는 검증된 immutable digest가 기록됩니다.
+
+GA는 `.github/workflows/publish-image.yml`을 GitHub Actions에서 수동 실행한다. workflow는 clean
+checkout에서 승인된 `DUPA_SIGNING_KEY_PEM`/`opensphere-plugins-v5`로 다시 서명하고,
+`linux/amd64,linux/arm64` build, provenance, SPDX SBOM, KST immutable tag와 `ga`를 검증한다.
+로컬 Edge digest를 GA로 retag하지 않는다.
+
+```powershell
+gh workflow run publish-image.yml `
+  --repo opensphere-platform/OpenSphere-shell-template `
+  --ref main
+gh run list `
+  --repo opensphere-platform/OpenSphere-shell-template `
+  --workflow publish-image.yml `
+  --limit 5
+$runId = '<run-id-from-run-list>'
+gh run watch $runId `
+  --repo opensphere-platform/OpenSphere-shell-template `
+  --exit-status
+```
+
+Edge·GA의 사전 조건, GHCR 확인, 실패 처리와 완료 증거는 workspace 최상위
+`_DOCS_/01-CONSTITUTION/RUNBOOK-0005-EDGE-GA-BUILD-PUBLISH-DEPLOY.md`를 따른다.

@@ -39,7 +39,7 @@ rg -n "shell-template|Shell Template|osp-shell-template-shell|template|openspher
 - [ ] `apiBase`와 contribution API base를 `/api/plugins/<id>`로 일치시킨다.
 - [ ] version을 `package.json`, lockfile, server fallback과 맞춘다.
 
-다음 파일은 승인 키가 있는 패키징 단계가 생성하므로 Git에 커밋하지 않는다.
+다음 파일은 Edge 또는 GA의 해당 trust 경계에서 패키징 단계가 생성하므로 Git에 커밋하지 않는다.
 
 ```text
 module-package.json
@@ -109,9 +109,12 @@ rg -n "nav:contribute|extensions\.nav|/p/<새-id>" ui-shell src test
 - [ ] `activate()`는 반복 호출과 늦은 Host 연결에 안전하다.
 - [ ] `deactivate()`는 Search, Manual, Notification, DOM/style, local subscriptions를 정리한다.
 - [ ] disable/uninstall 후 global contribution과 timer/listener가 남지 않는다.
-- [ ] production build 후 승인 키로 `npm run package:module`을 실행한다.
+- [ ] Edge는 Docker Desktop 전용 edge-local P-256 key로 `npm run package:module`을 실행한다.
+- [ ] GA는 승인된 GitHub Actions의 GA key로 clean checkout에서 다시 패키징한다.
 - [ ] SDK descriptor validation, entry/assets digest, signature를 검증한다.
-- [ ] multi-arch image, immutable digest, provenance와 SBOM을 게시한다.
+- [ ] Edge는 `linux/amd64`, GA는 `linux/amd64,linux/arm64`를 정확히 게시한다.
+- [ ] Edge도 GHCR immutable digest, KST official version tag와 `edge`를 게시한다.
+- [ ] GA는 provenance, SPDX SBOM, 보안 gate와 승인 증거를 게시한다.
 - [ ] channel tag는 모든 gate가 성공한 뒤에만 새 digest로 이동한다.
 - [ ] 설치·update·rollback evidence와 reason을 보존한다.
 
@@ -123,27 +126,57 @@ npm test
 npm run build
 ```
 
-승인 키와 SDK build가 있는 release 환경:
+Edge 전체 build·서명·게시·설치:
 
 ```powershell
-$env:DUPA_SIGNING_KEY = "<approved-p256-key-path>"
-$env:DUPA_SIGNING_KEY_ID = "opensphere-plugins-v5"
-$env:OPENSPHERE_SDK = "<OpenSphere-SDK-path>"
-npm run package:module
-npm run verify:artifacts
+$workspace = 'D:\@PROJECT\OpenSphere\OpenSphere-Platform-V2'
+& (Join-Path $workspace 'tools\release\Publish-LocalEdgeModule.ps1') `
+  -ModulePath '<새-subShell-repository-path>' `
+  -Repository 'ghcr.io/opensphere-platform/<canonical-image>' `
+  -SigningKey (Join-Path $env:USERPROFILE '.opensphere\keys\edge-local-v1-p256.pem') `
+  -SigningKeyId 'opensphere-edge-local-v1' `
+  -InstallReason '<변경 사유>'
 ```
 
-출시 후:
+Edge 출시 후:
 
 ```powershell
-os extensions inspect ghcr.io/<owner>/<image>:edge
-os extensions install ghcr.io/<owner>/<image>:edge --reason "<승인 사유>"
-os extensions activate <id>
+$image = 'ghcr.io/opensphere-platform/<canonical-image>'
+$digest = 'sha256:<digest-from-publisher>'
+$moduleId = '<module-id>'
+os extensions inspect "${image}@${digest}"
+os extensions install "${image}:edge" --reason "<승인 사유>"
+os extensions activate $moduleId
 os extensions list -o json
 ```
 
 - [ ] descriptor/signature/provenance/SBOM/platform 검증이 모두 `Verified`다.
+- [ ] official version은 KST `yyyyMMddHHmm`, compatibility version은 plain SemVer로 분리됐다.
+- [ ] key ID는 Edge `opensphere-edge-local-v1`, GA 승인 key ID로 정확히 분리됐다.
 - [ ] 현재 digest와 requested channel이 기록된다.
 - [ ] Main Shell 1단에 subShell entry 하나만 보인다.
 - [ ] 내부 2단 tree와 모든 deep-link가 동작한다.
 - [ ] disable → activate, update, rollback을 각각 검증한다.
+
+GA:
+
+```powershell
+$workflow = '<approved-ga-workflow.yml>'
+$repository = 'opensphere-platform/<subShell-repository>'
+gh workflow run $workflow `
+  --repo $repository `
+  --ref main
+$runId = '<run-id-from-run-list>'
+gh run watch $runId `
+  --repo $repository `
+  --exit-status
+```
+
+- [ ] workflow가 clean checkout에서 GA key로 다시 서명했다.
+- [ ] amd64와 arm64가 모두 존재한다.
+- [ ] provenance, SPDX SBOM, vulnerability/license gate와 승인 기록을 확인했다.
+- [ ] KST immutable tag, `ga`, exact digest가 같다.
+- [ ] Edge digest 또는 edge-local key를 재사용하지 않았다.
+
+상세 명령, 실패 처리와 완료 증거는 workspace 최상위
+`_DOCS_/01-CONSTITUTION/RUNBOOK-0005-EDGE-GA-BUILD-PUBLISH-DEPLOY.md`를 따른다.
